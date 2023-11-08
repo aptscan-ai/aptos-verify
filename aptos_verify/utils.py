@@ -1,18 +1,21 @@
 from aptos_verify.config import get_config
-from pydantic import validate_call, Field
+from pydantic import Field
+import pydantic
 from aptos_sdk.async_client import RestClient
 import aptos_verify.memory as local_memory
 from aptos_verify.config import get_logger
 import aptos_verify.exceptions as verify_exceptions
-import pydantic
 import typing
 import zlib
-from collections import namedtuple
+import os
+import tomli
+from subprocess import Popen, PIPE
 
 logger = get_logger(__name__)
+config = get_config()
 
 
-class AptosUtils:
+class AptosRpcUtils:
 
     @staticmethod
     async def aptos_rest_client(**options) -> RestClient:
@@ -20,19 +23,18 @@ class AptosUtils:
         Init rest client instance that will be used to work with RPC API
         Docs: https://pypi.org/project/aptos-sdk/
         """
-        cf = get_config()
         return RestClient(
-            base_url=cf.aptos_node_url,
+            base_url=f'{config.aptos_node_url}/{config.aptos_rpc_version}',
             **options
         )
 
     @staticmethod
     @pydantic.validate_call
-    async def rpc_account_get_package(account_address: typing.Annotated[str, Field(min_length=5)], **option) -> list[dict]:
+    async def rpc_account_get_package(account_address: typing.Annotated[str, Field(min_length=1)], **option) -> list[dict]:
         """
         Get resources of an account by given account address
         """
-        client = await AptosUtils.aptos_rest_client()
+        client = await AptosRpcUtils.aptos_rest_client()
         logger.info(
             f'Call Aptos RPC to get resoures of account: {account_address}')
         key = f'local_cache_account_package_{account_address}'
@@ -49,12 +51,12 @@ class AptosUtils:
 
     @staticmethod
     @pydantic.validate_call
-    async def rpc_account_get_source_code(account_address: typing.Annotated[str, Field(min_length=5)],
+    async def rpc_account_get_source_code(account_address: typing.Annotated[str, Field(min_length=1)],
                                           module_name: typing.Annotated[str, Field(min_length=1)]) -> str:
         """
         Get source code of a module
         """
-        packages = await AptosUtils.rpc_account_get_package(account_address=account_address)
+        packages = await AptosRpcUtils.rpc_account_get_package(account_address=account_address)
         for package in packages:
             for module in package.get('modules', []):
                 if module.get('name') == module_name:
@@ -68,7 +70,7 @@ class AptosUtils:
 
     @staticmethod
     @pydantic.validate_call
-    async def rpc_account_get_bytecode(account_address: typing.Annotated[str, Field(min_length=5)],
+    async def rpc_account_get_bytecode(account_address: typing.Annotated[str, Field(min_length=1)],
                                        module_name: typing.Annotated[str, Field(min_length=1)]) -> str:
         logger.info(
             f'Start get bytecode of module: {account_address}::{module_name}')
@@ -76,7 +78,7 @@ class AptosUtils:
         rs = local_memory.get(key=key)
         if local_memory.get(key=key):
             return rs
-        sdk_client = await AptosUtils.aptos_rest_client()
+        sdk_client = await AptosRpcUtils.aptos_rest_client()
         client = sdk_client.client
         request = f"{sdk_client.base_url}/accounts/{account_address}/module/{module_name}"
         response = await client.get(request)
@@ -90,6 +92,10 @@ class AptosUtils:
 
 
 class AptosBytecodeUtils:
+
+    @staticmethod
+    def clean_prefix(hex_str: str, prefix: str = '0x'):
+        return hex_str[len(prefix):] if hex_str.startswith(prefix) else hex_str
 
     @staticmethod
     @pydantic.validate_call
@@ -106,5 +112,69 @@ class AptosBytecodeUtils:
         """
         This method will extract bytecode from a build project move
         """
-        bytecode = ''
-        return bytecode
+        with open(os.path.join(path, "Move.toml"), "rb") as f:
+            data = tomli.load(f)
+
+        package = data["package"]["name"]
+
+        package_build_dir = os.path.join(path, "build", package)
+        module_directory = os.path.join(package_build_dir, "bytecode_modules")
+        module_paths = os.listdir(module_directory)
+        modules = []
+        for module_path in module_paths:
+            module_path = os.path.join(module_directory, module_path)
+            if not os.path.isfile(module_path) and not module_path.endswith(".mv"):
+                continue
+            with open(module_path, "rb") as f:
+                print(module_path)
+                module = f.read()
+                modules.append(module)
+        return bytes(modules[0]).hex()
+
+
+class ExecuteCmd():
+
+    @staticmethod
+    def exec(cmd: str, **kwargs):
+        logger.debug(f"Start run cmd: {cmd}")
+        process = Popen(cmd,
+                        shell=True, stdout=PIPE, stderr=PIPE)
+        process.wait()
+        std_out, std_err = process.communicate()
+        if std_err.decode() != '':
+            logger.exception(std_err.decode())
+        return std_out.decode()
+
+
+class AptosModuleUtils:
+
+    FILE_LOCK_FOLDER = 'lock.lock'
+
+    @staticmethod
+    @staticmethod
+    @pydantic.validate_call
+    async def build_from_template(account_address: typing.Annotated[str, Field(min_length=1)],
+                                  manifest: typing.Annotated[str, Field(min_length=10)],
+                                  source_code: typing.Annotated[str, Field(
+                                      min_length=10)],
+                                  force: bool = False
+                                  ):
+
+        if force:
+            # remove all files on move_build_path
+            ExecuteCmd.exec(
+                f'rm -r {os.path.join(config.move_build_path,"*")}')
+        elif os.path.isfile(os.path.join(config.move_build_path, AptosModuleUtils.FILE_LOCK_FOLDER)):
+            raise verify_exceptions.CurrentBuildModuleInProcessException()
+
+        # copy all file on template to current path
+        ExecuteCmd.exec(
+            f'cp -r {os.path.join(config.move_template_path,"*")} {os.path.join(config.move_build_path,"")}')
+
+        # replace template with given params
+        logger.debug('Create Move.toml from manifest')
+        move_toml_path = os.path.join(config.move_template_path, "Move.toml")
+        with open(move_toml_path, 'w') as filetowrite:
+            filetowrite.write(manifest)
+        logger.debug('Create file that contain from manifest')
+        # start build project

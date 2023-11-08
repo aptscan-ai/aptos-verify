@@ -116,4 +116,4 @@ python_dags/.idea
 src/adhoc/*
 **/node_modules*
 node_modules
-graphql/generated_schemas
+move/current/*

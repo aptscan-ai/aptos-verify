@@ -1,11 +1,29 @@
 from pydantic import BaseModel
 import logging
+import os
 
 
 class DefaultConfig(BaseModel):
 
-    aptos_node_url: str = 'https://fullnode.mainnet.aptoslabs.com/v1'
+    aptos_rpc_version: str = 'v1'
+    aptos_node_url: str = 'https://fullnode.devnet.aptoslabs.com'
     log_level: int = logging.DEBUG
+
+    @property
+    def root_dir(self) -> str:
+        return f'{os.path.abspath(os.curdir)}/'
+
+    @property
+    def move_template_path(self) -> str:
+        return os.path.join(self.root_dir, 'move/template/')
+
+    @property
+    def move_build_path(self) -> str:
+        return os.path.join(self.root_dir, 'move/current/')
+
+
+def parsing_from_cmdargs():
+    pass
 
 
 def get_config() -> DefaultConfig:

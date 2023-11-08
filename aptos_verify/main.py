@@ -17,13 +17,23 @@ def format_output_message(result: list):
 async def process_rules(args: CmdArgs):
     rs = []
     logger.info("Start process rules...")
-    module_id = ''
     for rule in list_rules:
+        check = False
+        exception = 'None'
+
         try:
-            rs.append(await rule(args))
+            check = await rule(args)
+            rs.append(check)
         except BaseException as e:
             logger.error(f"Fail to process rule: {rule.__name__}")
             logger.debug(traceback.format_exc())
-            pass
+            exception = str(e)
+            check = 'Skip'
+
+        logger.info(f"""
+                    **************** Rule: {rule.__name__} *****************
+                    Result: {check}
+                    Exception: {exception}
+                    """)
 
     return format_output_message(rs)
