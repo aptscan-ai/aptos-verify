@@ -6,7 +6,7 @@ import os
 class DefaultConfig(BaseModel):
 
     aptos_rpc_version: str = 'v1'
-    aptos_node_url: str = 'https://fullnode.devnet.aptoslabs.com'
+    aptos_node_url: str = 'https://fullnode.mainnet.aptoslabs.com'
     log_level: int = logging.DEBUG
 
     @property

@@ -10,6 +10,7 @@ import zlib
 import os
 import tomli
 from subprocess import Popen, PIPE
+import json
 
 logger = get_logger(__name__)
 config = get_config()
@@ -99,7 +100,7 @@ class AptosBytecodeUtils:
 
     @staticmethod
     @pydantic.validate_call
-    def decompress_bytecode(hex_string: typing.Annotated[str, Field(min_length=5)]) -> str:
+    def decompress_bytecode(hex_string: typing.Annotated[str, Field(min_length=10)]) -> str:
         unit8_hex_bytes = bytearray(
             bytes.fromhex(hex_string.replace('0x', '')))
         decompressed_data = zlib.decompress(unit8_hex_bytes, 15+32)
@@ -108,7 +109,7 @@ class AptosBytecodeUtils:
 
     @staticmethod
     @pydantic.validate_call
-    def extract_bytecode_from_build(path: typing.Annotated[str, Field(min_length=1)]) -> str:
+    async def extract_bytecode_from_build(path: typing.Annotated[str, Field(min_length=1)]) -> str:
         """
         This method will extract bytecode from a build project move
         """
@@ -126,7 +127,6 @@ class AptosBytecodeUtils:
             if not os.path.isfile(module_path) and not module_path.endswith(".mv"):
                 continue
             with open(module_path, "rb") as f:
-                print(module_path)
                 module = f.read()
                 modules.append(module)
         return bytes(modules[0]).hex()
@@ -135,15 +135,17 @@ class AptosBytecodeUtils:
 class ExecuteCmd():
 
     @staticmethod
-    def exec(cmd: str, **kwargs):
+    def exec(cmd: str,  **kwargs):
         logger.debug(f"Start run cmd: {cmd}")
         process = Popen(cmd,
                         shell=True, stdout=PIPE, stderr=PIPE)
         process.wait()
         std_out, std_err = process.communicate()
-        if std_err.decode() != '':
-            logger.exception(std_err.decode())
-        return std_out.decode()
+        error_message = std_err.decode()
+        stdout_message = std_out.decode()
+        logger.debug(
+            f'Exec cmd: {cmd}.\n Stdout:\n {stdout_message} \n Stderror: \n{error_message} \n')
+        return stdout_message, error_message
 
 
 class AptosModuleUtils:
@@ -151,10 +153,8 @@ class AptosModuleUtils:
     FILE_LOCK_FOLDER = 'lock.lock'
 
     @staticmethod
-    @staticmethod
     @pydantic.validate_call
-    async def build_from_template(account_address: typing.Annotated[str, Field(min_length=1)],
-                                  manifest: typing.Annotated[str, Field(min_length=10)],
+    async def build_from_template(manifest: typing.Annotated[str, Field(min_length=5)],
                                   source_code: typing.Annotated[str, Field(
                                       min_length=10)],
                                   force: bool = False
@@ -172,9 +172,28 @@ class AptosModuleUtils:
             f'cp -r {os.path.join(config.move_template_path,"*")} {os.path.join(config.move_build_path,"")}')
 
         # replace template with given params
-        logger.debug('Create Move.toml from manifest')
-        move_toml_path = os.path.join(config.move_template_path, "Move.toml")
+        logger.info('Create Move.toml from manifest')
+        move_toml_path = os.path.join(config.move_build_path, "Move.toml")
         with open(move_toml_path, 'w') as filetowrite:
             filetowrite.write(manifest)
-        logger.debug('Create file that contain from manifest')
+        logger.info('Create Move.toml done')
+        logger.info('Create code.move to store source code move')
+        code_path = os.path.join(config.move_build_path, "sources/code.move")
+        with open(code_path, 'w') as filetowrite:
+            filetowrite.write(source_code)
+        logger.info('Create sources/code.move done')
+
         # start build project
+        logger.info('Start build project')
+        stdout_message, stderr_message = ExecuteCmd.exec(
+            f'cd {config.move_build_path} && aptos move compile')
+        res = True
+        try:
+            stdout_message = json.loads(stdout_message)
+            if not stdout_message.get('Result'):
+                raise ValueError()
+        except BaseException as e:
+            res = False
+            logger.debug(
+                f'Fail to build module from source: \n stdout: {stdout_message} \n {stderr_message}')
+        return res

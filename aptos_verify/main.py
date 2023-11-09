@@ -28,7 +28,7 @@ async def process_rules(args: CmdArgs):
             logger.error(f"Fail to process rule: {rule.__name__}")
             logger.debug(traceback.format_exc())
             exception = str(e)
-            check = 'Skip'
+            check = 'Skip because of exception'
 
         logger.info(f"""
                     **************** Rule: {rule.__name__} *****************

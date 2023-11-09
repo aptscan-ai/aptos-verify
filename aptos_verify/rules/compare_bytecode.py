@@ -16,7 +16,8 @@ async def get_bytecode_from_source_code_onchain(account_address: str, module_nam
     # get source code onchain
     source_code = await AptosRpcUtils.rpc_account_get_source_code(account_address=account_address, module_name=module_name)
     bytecode = source_code.get('source')
-    if not bytecode:
+    
+    if not bytecode or bytecode.replace('0x','') == '':
         raise verify_exceptions.ModuleHasNoSourceCodeOnChainException()
     package = source_code.get('package')
     decompressed_source_code = AptosBytecodeUtils.decompress_bytecode(
@@ -27,29 +28,23 @@ async def get_bytecode_from_source_code_onchain(account_address: str, module_nam
     manifest = AptosBytecodeUtils.decompress_bytecode(package.get('manifest'))
 
     # build bytecode from source code thats pulled onchain
-    await AptosModuleUtils.build_from_template(
-        account_address=account_address, manifest=manifest, source_code=decompressed_source_code, force=True)
-    return
-    # get bytecode from build source
-    byte_from_source = await AptosBytecodeUtils.extract_bytecode_from_build(
-        config.move_template_path)
+    res = await AptosModuleUtils.build_from_template(manifest=manifest, source_code=decompressed_source_code, force=True)
+    if res:
+        # get bytecode from build source
+        byte_from_source = await AptosBytecodeUtils.extract_bytecode_from_build(
+            config.move_build_path)
 
-    return byte_from_source
-    return {
-        'source_code': decompressed_source_code,
-        'manifest': manifest,
-        'package_name':  package_name
-    }
+        return byte_from_source
+    return None
 
 
 async def process_compare_bycode(args: CmdArgs, **krawgs):
     """
     This code will compare bytecode from onchain and source code thats deployed and published onchain
     """
+
+    account, module_name = args.module_id.split('::')   
     
-    account, module_name = args.module_id.split('::')
-    return await get_bytecode_from_source_code_onchain(
-            account_address=account, module_name=module_name)
     bytecode_from_source, bytecode_info_onchain = await asyncio.gather(
         get_bytecode_from_source_code_onchain(
             account_address=account, module_name=module_name),

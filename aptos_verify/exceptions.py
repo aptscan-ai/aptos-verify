@@ -19,3 +19,6 @@ class ModuleHasNoSourceCodeOnChainException(BaseException):
 class CurrentBuildModuleInProcessException(BaseException):
     def __init__(self, message='Current path for building module move is in process.'):
         return super().__init__(message)
+
+class CmdExceException(BaseException):
+    pass
