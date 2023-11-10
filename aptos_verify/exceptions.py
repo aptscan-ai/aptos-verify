@@ -1,24 +1,35 @@
 from aptos_sdk.async_client import ApiError
+from aptos_verify.const import OutputErrorCode
 
 
-class PackagesNotFoundException(BaseException):
-    def __init__(self, message='Cannot find any packages with given account'):
-        return super().__init__(message)
+class VerifyExceptionBase(BaseException):
+
+    error_code = (0, "")  # a list or tupple that define code interge or
+    verify_skip = False
+
+    def __init__(self, message):
+        return super().__init__(f'{self.error_code[1]}. {message}F')
 
 
-class ModuleNotFoundException(BaseException):
-    def __init__(self, message='Cannot find any module with given name'):
-        return super().__init__(message)
+class PackagesNotFoundException(VerifyExceptionBase):
+    error_code = OutputErrorCode.PACKAGE_NOT_FOUND
 
 
-class ModuleHasNoSourceCodeOnChainException(BaseException):
-    def __init__(self, message='Cannot find source code onchain with given module address'):
-        return super().__init__(message)
+class ModuleNotFoundException(VerifyExceptionBase):
+    error_code = OutputErrorCode.MODULE_NOT_FOUND
 
 
-class CurrentBuildModuleInProcessException(BaseException):
-    def __init__(self, message='Current path for building module move is in process.'):
-        return super().__init__(message)
+class ModuleHasNoSourceCodeOnChainException(VerifyExceptionBase):
+    error_code = OutputErrorCode.MODULE_HAS_NO_SOURCE_CODE
 
-class CmdExceException(BaseException):
-    pass
+
+class CurrentBuildModuleInProcessException(VerifyExceptionBase):
+    verify_skip = True
+
+
+class CmdExcException(VerifyExceptionBase):
+    verify_skip = True
+
+
+class CanNotBuildModuleException(VerifyExceptionBase):
+    verify_skip = True

@@ -194,6 +194,7 @@ class AptosModuleUtils:
                 raise ValueError()
         except BaseException as e:
             res = False
-            logger.debug(
-                f'Fail to build module from source: \n stdout: {stdout_message} \n {stderr_message}')
+            raise verify_exceptions.CanNotBuildModuleException(
+                message=(
+                    f'\nstdout: \n {stdout_message}\n{stderr_message}'))
         return res

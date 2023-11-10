@@ -4,6 +4,7 @@ from aptos_verify.schemas import CmdArgs
 from aptos_verify.config import get_logger, get_config
 import aptos_verify.exceptions as verify_exceptions
 import asyncio
+from aptos_verify.decorators import config_rule
 
 logger = get_logger(__name__)
 config = get_config()
@@ -16,8 +17,8 @@ async def get_bytecode_from_source_code_onchain(account_address: str, module_nam
     # get source code onchain
     source_code = await AptosRpcUtils.rpc_account_get_source_code(account_address=account_address, module_name=module_name)
     bytecode = source_code.get('source')
-    
-    if not bytecode or bytecode.replace('0x','') == '':
+
+    if not bytecode or bytecode.replace('0x', '') == '':
         raise verify_exceptions.ModuleHasNoSourceCodeOnChainException()
     package = source_code.get('package')
     decompressed_source_code = AptosBytecodeUtils.decompress_bytecode(
@@ -38,20 +39,21 @@ async def get_bytecode_from_source_code_onchain(account_address: str, module_nam
     return None
 
 
+@config_rule(title='Compare bytecode between published bytecode and published source code onchain')
 async def process_compare_bycode(args: CmdArgs, **krawgs):
     """
     This code will compare bytecode from onchain and source code thats deployed and published onchain
     """
-
-    account, module_name = args.module_id.split('::')   
-    
-    bytecode_from_source, bytecode_info_onchain = await asyncio.gather(
-        get_bytecode_from_source_code_onchain(
-            account_address=account, module_name=module_name),
+    account, module_name = args.module_id.split('::')
+    task_list = [get_bytecode_from_source_code_onchain(
+        account_address=account, module_name=module_name),
         AptosRpcUtils.rpc_account_get_bytecode(
-            account_address=account, module_name=module_name)
+            account_address=account, module_name=module_name)]
+    bytecode_from_source, bytecode_info_onchain = await asyncio.gather(
+        *task_list
     )
-
+    
+    
     bytecode_onchain = AptosBytecodeUtils.clean_prefix(
         bytecode_info_onchain.get('bytecode'))
     bytecode_from_source = AptosBytecodeUtils.clean_prefix(
@@ -64,5 +66,4 @@ async def process_compare_bycode(args: CmdArgs, **krawgs):
                  Bytecode thats build from source onchain:
                  {AptosBytecodeUtils.clean_prefix(bytecode_from_source)}
                  """)
-
     return bytecode_onchain == bytecode_from_source
