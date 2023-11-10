@@ -2,9 +2,10 @@
 from aptos_verify.utils import AptosRpcUtils, AptosBytecodeUtils, AptosModuleUtils
 from aptos_verify.schemas import CmdArgs
 from aptos_verify.config import get_logger, get_config
-import aptos_verify.exceptions as verify_exceptions
+from aptos_verify.exceptions import ModuleNotFoundException
 import asyncio
 from aptos_verify.decorators import config_rule
+import aptos_verify.exceptions as verify_exceptions
 
 logger = get_logger(__name__)
 config = get_config()
@@ -15,26 +16,36 @@ async def get_bytecode_from_source_code_onchain(account_address: str, module_nam
     Get source code onchain and build by a Move Template.
     """
     # get source code onchain
-    source_code = await AptosRpcUtils.rpc_account_get_source_code(account_address=account_address, module_name=module_name)
-    bytecode = source_code.get('source')
-
-    if not bytecode or bytecode.replace('0x', '') == '':
-        raise verify_exceptions.ModuleHasNoSourceCodeOnChainException()
-    package = source_code.get('package')
-    decompressed_source_code = AptosBytecodeUtils.decompress_bytecode(
-        bytecode)
-    manifest = AptosBytecodeUtils.decompress_bytecode(
-        package.get('manifest'))
-    package_name = package.get('name')
-    manifest = AptosBytecodeUtils.decompress_bytecode(package.get('manifest'))
+    module_data = await AptosRpcUtils.rpc_account_get_source_code(account_address=account_address, module_name=module_name)
+    flat_modules = [module_data.get('module')] + \
+        module_data.get('related_modules')
+    merge_source_code_string = ""
+    for source_code in flat_modules:
+        bytecode = source_code.get('source')
+        if not bytecode or bytecode.replace('0x', '') == '':
+            raise verify_exceptions.ModuleHasNoSourceCodeOnChainException()
+        package = source_code.get('package')
+        decompressed_source_code = AptosBytecodeUtils.decompress_bytecode(
+            bytecode)
+        manifest = AptosBytecodeUtils.decompress_bytecode(
+            package.get('manifest'))
+        merge_source_code_string = merge_source_code_string + \
+            '\n' + decompressed_source_code
 
     # build bytecode from source code thats pulled onchain
-    res = await AptosModuleUtils.build_from_template(manifest=manifest, source_code=decompressed_source_code, force=True)
-    if res:
+    try:
+        buid_res = await AptosModuleUtils.build_from_template(manifest=manifest, source_code=merge_source_code_string, force=True, aptos_framework_rev='')
+    except verify_exceptions.CanNotBuildModuleException:
+        logger.error(
+            "Build with default manifest Move.toml fail, try to replace config [dependencies.AptosFramework] with rev=main.")
+        buid_res = await AptosModuleUtils.build_from_template(manifest=manifest, source_code=merge_source_code_string, force=True, aptos_framework_rev='main')
+    if buid_res:
         # get bytecode from build source
         byte_from_source = await AptosBytecodeUtils.extract_bytecode_from_build(
-            config.move_build_path)
-
+            config.move_build_path,
+            module_name=module_name
+        )
+        logger.info("Build and extract bytecode from source code and manifest successfuly. ")
         return byte_from_source
     return None
 
@@ -52,8 +63,7 @@ async def process_compare_bycode(args: CmdArgs, **krawgs):
     bytecode_from_source, bytecode_info_onchain = await asyncio.gather(
         *task_list
     )
-    
-    
+
     bytecode_onchain = AptosBytecodeUtils.clean_prefix(
         bytecode_info_onchain.get('bytecode'))
     bytecode_from_source = AptosBytecodeUtils.clean_prefix(

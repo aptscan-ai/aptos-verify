@@ -9,6 +9,7 @@ import typing
 import zlib
 import os
 import tomli
+import tomli_w
 from subprocess import Popen, PIPE
 import json
 
@@ -53,24 +54,29 @@ class AptosRpcUtils:
     @staticmethod
     @pydantic.validate_call
     async def rpc_account_get_source_code(account_address: typing.Annotated[str, Field(min_length=1)],
-                                          module_name: typing.Annotated[str, Field(min_length=1)]) -> str:
+                                          module_name: typing.Annotated[str, Field(min_length=1)] = "") -> str:
         """
         Get source code of a module
         """
         packages = await AptosRpcUtils.rpc_account_get_package(account_address=account_address)
-        for package in packages:
-            for module in package.get('modules', []):
-                if module.get('name') == module_name:
-                    return {
-                        'source': module.get('source'),
-                        'source_map': module.get('source_map'),
-                        'module_name': module.get('name'),
-                        'package': package
-                    }
-        raise verify_exceptions.ModuleNotFoundException()
+        needed_module = {}
+        all_modules = [{
+            'source': module.get('source'),
+            'source_map': module.get('source_map'),
+            'module_name': module.get('name'),
+            'package': package
+        } for package in packages for module in package.get('modules', [])]
+        needed_module = [k for k in all_modules if k.get(
+            'module_name') == module_name]
+        if not needed_module or not all_modules:
+            raise verify_exceptions.ModuleNotFoundException()
+        return {
+            'module': needed_module[0],
+            'related_modules': [k for k in all_modules if k.get('module_name') != module_name]
+        }
 
-    @staticmethod
-    @pydantic.validate_call
+    @ staticmethod
+    @ pydantic.validate_call
     async def rpc_account_get_bytecode(account_address: typing.Annotated[str, Field(min_length=1)],
                                        module_name: typing.Annotated[str, Field(min_length=1)]) -> str:
         logger.info(
@@ -109,10 +115,12 @@ class AptosBytecodeUtils:
 
     @staticmethod
     @pydantic.validate_call
-    async def extract_bytecode_from_build(path: typing.Annotated[str, Field(min_length=1)]) -> str:
+    async def extract_bytecode_from_build(path: typing.Annotated[str, Field(min_length=1)], module_name: str = '') -> str:
         """
         This method will extract bytecode from a build project move
         """
+        logger.info(
+            f"Start extract bytecode from path: {path}. (module name: [{module_name}])")
         with open(os.path.join(path, "Move.toml"), "rb") as f:
             data = tomli.load(f)
 
@@ -123,12 +131,17 @@ class AptosBytecodeUtils:
         module_paths = os.listdir(module_directory)
         modules = []
         for module_path in module_paths:
+            file_name = module_path
             module_path = os.path.join(module_directory, module_path)
             if not os.path.isfile(module_path) and not module_path.endswith(".mv"):
+                continue
+            if module_name != '' and file_name != f'{module_name}.mv':
                 continue
             with open(module_path, "rb") as f:
                 module = f.read()
                 modules.append(module)
+        if not modules:
+            raise verify_exceptions.ModuleNotBuild()
         return bytes(modules[0]).hex()
 
 
@@ -157,7 +170,8 @@ class AptosModuleUtils:
     async def build_from_template(manifest: typing.Annotated[str, Field(min_length=5)],
                                   source_code: typing.Annotated[str, Field(
                                       min_length=10)],
-                                  force: bool = False
+                                  force: bool = False,
+                                  aptos_framework_rev: str = ''
                                   ):
 
         if force:
@@ -173,10 +187,22 @@ class AptosModuleUtils:
 
         # replace template with given params
         logger.info('Create Move.toml from manifest')
+        if aptos_framework_rev != '':
+            parse_toml = tomli.loads(manifest)
+            dependencies = parse_toml['dependencies']
+            for key, element in dependencies.items():
+                if key in ['AptosFramework', 'AptosStdlib']:
+                    element['rev'] = aptos_framework_rev
+                    dependencies[key] = element
+
+            parse_toml['dependencies'] = dependencies
+            manifest = tomli_w.dumps(parse_toml)
+
         move_toml_path = os.path.join(config.move_build_path, "Move.toml")
         with open(move_toml_path, 'w') as filetowrite:
             filetowrite.write(manifest)
         logger.info('Create Move.toml done')
+
         logger.info('Create code.move to store source code move')
         code_path = os.path.join(config.move_build_path, "sources/code.move")
         with open(code_path, 'w') as filetowrite:

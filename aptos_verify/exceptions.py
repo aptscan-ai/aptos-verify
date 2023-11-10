@@ -33,3 +33,6 @@ class CmdExcException(VerifyExceptionBase):
 
 class CanNotBuildModuleException(VerifyExceptionBase):
     verify_skip = True
+
+class ModuleNotBuild(VerifyExceptionBase):
+    verify_skip = True

@@ -7,7 +7,7 @@ class DefaultConfig(BaseModel):
 
     aptos_rpc_version: str = 'v1'
     aptos_node_url: str = 'https://fullnode.mainnet.aptoslabs.com'
-    log_level: int = logging.DEBUG
+    log_level: int = logging.INFO
 
     @property
     def root_dir(self) -> str:
