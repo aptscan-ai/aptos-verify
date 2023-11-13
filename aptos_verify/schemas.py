@@ -1,11 +1,19 @@
 from pydantic import BaseModel
 from typing import Optional
 from aptos_verify.config import Config
+import typing
 
 
-class Args(BaseModel):
+class Params(BaseModel):
+
+    aptos_rpc_version: typing.Optional[str] = 'v1'
+    aptos_node_url: typing.Optional[str] = 'https://fullnode.mainnet.aptoslabs.com'
+    compile_bytecode_version: typing.Optional[str] = ''
+
+
+class CliArgs(BaseModel):
     module_id: str
-    config: Optional[Config]
+    params: Optional[Params]
 
 
 class OutputResult(BaseModel):

@@ -1,12 +1,10 @@
 from aptos_verify.main import start_verify
-from aptos_verify.schemas import Args
+from aptos_verify.schemas import CliArgs, Params
 import asyncio
-from aptos_verify.config import get_config, set_config
 from argparse import ArgumentParser
-from aptos_verify.schemas import Args
 
 
-def parsing_args() -> Args:
+def parsing_args() -> CliArgs:
     """
     Parsing args from cmd
     """
@@ -35,11 +33,11 @@ def parsing_args() -> Args:
     if args.compileversion:
         kwargs['compile_bytecode_version'] = args.compileversion
 
-    set_config(**kwargs)
+    params = Params(**kwargs)
 
-    return Args(
+    return CliArgs(
         module_id=args.moduleaddr,
-        config=get_config()
+        params=params
     )
 
 

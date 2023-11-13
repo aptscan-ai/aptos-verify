@@ -3,7 +3,7 @@ from pydantic import Field
 import pydantic
 from aptos_sdk.async_client import RestClient
 from aptos_verify.memory import LocalMemory
-from aptos_verify.config import get_logger, Config, get_config
+from aptos_verify.config import get_logger
 import aptos_verify.exceptions as verify_exceptions
 import typing
 import zlib
@@ -12,6 +12,7 @@ import tomli
 import tomli_w
 from subprocess import Popen, PIPE
 import json
+from aptos_verify.schemas import Params
 
 logger = get_logger(__name__)
 
@@ -19,23 +20,23 @@ logger = get_logger(__name__)
 class AptosRpcUtils:
 
     @staticmethod
-    async def aptos_rest_client(config: Config = get_config(), **options) -> RestClient:
+    async def aptos_rest_client(params: Params = Params(), **options) -> RestClient:
         """
         Init rest client instance that will be used to work with RPC API
         Docs: https://pypi.org/project/aptos-sdk/
         """
         return RestClient(
-            base_url=f'{config.aptos_node_url}/{config.aptos_rpc_version}',
+            base_url=f'{params.aptos_node_url}/{params.aptos_rpc_version}',
             **options
         )
 
     @staticmethod
     @pydantic.validate_call
-    async def rpc_account_get_package(account_address: typing.Annotated[str, Field(min_length=1)], config: Config = get_config(), **option) -> list[dict]:
+    async def rpc_account_get_package(account_address: typing.Annotated[str, Field(min_length=1)], params: Params = Params(), **option) -> list[dict]:
         """
         Get resources of an account by given account address
         """
-        client = await AptosRpcUtils.aptos_rest_client(config)
+        client = await AptosRpcUtils.aptos_rest_client(params)
         logger.info(
             f'Call Aptos RPC to get resoures of account: {account_address}')
         key = f'local_cache_account_package_{account_address}'
@@ -53,13 +54,14 @@ class AptosRpcUtils:
     @staticmethod
     @pydantic.validate_call
     async def rpc_account_get_source_code(account_address: typing.Annotated[str, Field(min_length=1)],
-                                          module_name: typing.Annotated[str, Field(min_length=1)] = "",
-                                          config: Config = get_config()
+                                          module_name: typing.Annotated[str, Field(
+                                              min_length=1)] = "",
+                                          params: Params = Params()
                                           ) -> str:
         """
         Get source code of a module
         """
-        packages = await AptosRpcUtils.rpc_account_get_package(account_address=account_address, config=config)
+        packages = await AptosRpcUtils.rpc_account_get_package(account_address=account_address, params=params)
         needed_module = {}
         all_modules = [{
             'source': module.get('source'),
@@ -80,7 +82,7 @@ class AptosRpcUtils:
     @ pydantic.validate_call
     async def rpc_account_get_bytecode(account_address: typing.Annotated[str, Field(min_length=1)],
                                        module_name: typing.Annotated[str, Field(min_length=1)],
-                                       config: Config = get_config()
+                                       params: Params = Params()
                                        ) -> str:
         logger.info(
             f'Start get bytecode of module: {account_address}::{module_name}')
@@ -88,7 +90,7 @@ class AptosRpcUtils:
         rs = LocalMemory.get(key=key)
         if LocalMemory.get(key=key):
             return rs
-        sdk_client = await AptosRpcUtils.aptos_rest_client(config=config)
+        sdk_client = await AptosRpcUtils.aptos_rest_client(params=params)
         client = sdk_client.client
         request = f"{sdk_client.base_url}/accounts/{account_address}/module/{module_name}"
         response = await client.get(request)
@@ -173,19 +175,20 @@ class AptosModuleUtils:
     async def build_from_template(manifest: typing.Annotated[str, Field(min_length=5)],
                                   source_code: typing.Annotated[str, Field(
                                       min_length=10)],
-                                  config: Config = get_config(),
+                                  params: Params = Params(),
                                   force: bool = False,
                                   bytecode_compile_version='',
                                   aptos_framework_rev: str = ''
                                   ):
-
+        config = get_config()
+        
         if force:
             # remove all files on move_build_path
             ExecuteCmd.exec(
                 f'rm -r {os.path.join(config.move_build_path,"*")}')
         elif os.path.isfile(os.path.join(config.move_build_path, AptosModuleUtils.FILE_LOCK_FOLDER)):
             raise verify_exceptions.CurrentBuildModuleInProcessException()
-
+        
         # copy all file on template to current path
         ExecuteCmd.exec(
             f'cp -r {os.path.join(config.move_template_path,"*")} {os.path.join(config.move_build_path,"")}')

@@ -1,3 +1,4 @@
+import aptos_verify.config
 from pydantic import BaseModel
 import logging
 import os
@@ -10,11 +11,7 @@ __store_local_key = 'local_store_global_config'
 
 
 class Config(BaseModel):
-
-    aptos_rpc_version: typing.Optional[str] = 'v1'
-    aptos_node_url: typing.Optional[str] = 'https://fullnode.mainnet.aptoslabs.com'
     log_level: typing.Optional[int] = logging.INFO
-    compile_bytecode_version: typing.Optional[str] = ''
 
     @property
     def root_dir(self) -> str:
@@ -42,20 +39,5 @@ def get_logger(name: str, config: Config = None):
 logger = get_logger(__name__)
 
 
-def set_config(**kwargs) -> Config:
-    logger.debug(f"Update global config with values: {kwargs}")
-    _cf = LocalMemory.get(__store_local_key)
-    if _cf is None:
-        _cf = Config(**kwargs)
-    else:
-        print(kwargs)
-        for k, v in kwargs.items():
-            setattr(_cf, k, v)
-    return LocalMemory.set(__store_local_key, _cf)
-
-
 def get_config() -> Config:
-    _cf = LocalMemory.get(__store_local_key)
-    if not _cf:
-        set_config()
-    return _cf
+    return Config()

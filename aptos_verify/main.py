@@ -1,6 +1,6 @@
 from aptos_verify.rules.compare_bytecode import process_compare_bycode
 from aptos_verify.config import get_logger
-from aptos_verify.schemas import Args
+from aptos_verify.schemas import CliArgs
 from aptos_verify.schemas import OutputResult
 from aptos_verify.memory import __all__
 
@@ -16,7 +16,7 @@ list_rules = [
 ]
 
 
-async def start_verify(args: Args) -> list[OutputResult]:
+async def start_verify(args: CliArgs) -> list[OutputResult]:
     """
     Start verify a module with given address (ex: 0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa::swap_utils)
     """
