@@ -1,20 +1,25 @@
 from aptos_verify.rules.compare_bytecode import process_compare_bycode
 from aptos_verify.config import get_logger
-from aptos_verify.schemas import CmdArgs
+from aptos_verify.schemas import Args
 from aptos_verify.schemas import OutputResult
+from aptos_verify.memory import __all__
 
 logger = get_logger(__name__)
+
+__all__ = [
+    "process_compare_bycode",
+    "start_verify"
+]
 
 list_rules = [
     process_compare_bycode
 ]
 
 
-def format_output_message(result: list):
-    return result
-
-
-async def process_rules(args: CmdArgs):
+async def start_verify(args: Args) -> list[OutputResult]:
+    """
+    Start verify a module with given address (ex: 0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa::swap_utils)
+    """
     rs = []
     logger.info("Start process rules...")
     for rule in list_rules:
@@ -28,4 +33,4 @@ async def process_rules(args: CmdArgs):
                     Exception Class: {check.exeption_name}
                     """)
 
-    return format_output_message(rs)
+    return rs

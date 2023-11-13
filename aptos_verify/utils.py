@@ -2,8 +2,8 @@ from aptos_verify.config import get_config
 from pydantic import Field
 import pydantic
 from aptos_sdk.async_client import RestClient
-import aptos_verify.memory as local_memory
-from aptos_verify.config import get_logger
+from aptos_verify.memory import LocalMemory
+from aptos_verify.config import get_logger, Config, get_config
 import aptos_verify.exceptions as verify_exceptions
 import typing
 import zlib
@@ -14,13 +14,12 @@ from subprocess import Popen, PIPE
 import json
 
 logger = get_logger(__name__)
-config = get_config()
 
 
 class AptosRpcUtils:
 
     @staticmethod
-    async def aptos_rest_client(**options) -> RestClient:
+    async def aptos_rest_client(config: Config = get_config(), **options) -> RestClient:
         """
         Init rest client instance that will be used to work with RPC API
         Docs: https://pypi.org/project/aptos-sdk/
@@ -32,33 +31,35 @@ class AptosRpcUtils:
 
     @staticmethod
     @pydantic.validate_call
-    async def rpc_account_get_package(account_address: typing.Annotated[str, Field(min_length=1)], **option) -> list[dict]:
+    async def rpc_account_get_package(account_address: typing.Annotated[str, Field(min_length=1)], config: Config = get_config(), **option) -> list[dict]:
         """
         Get resources of an account by given account address
         """
-        client = await AptosRpcUtils.aptos_rest_client()
+        client = await AptosRpcUtils.aptos_rest_client(config)
         logger.info(
             f'Call Aptos RPC to get resoures of account: {account_address}')
         key = f'local_cache_account_package_{account_address}'
-        rs = local_memory.get(key=key)
-        if local_memory.get(key=key):
+        rs = LocalMemory.get(key=key)
+        if LocalMemory.get(key=key):
             return rs
         resources = await client.account_resource(
             account_address=account_address, resource_type='0x1::code::PackageRegistry')
         if resources:
             rs = resources.get('data', {}).get('packages')
-            local_memory.set(key=key, value=rs)
+            LocalMemory.set(key=key, value=rs)
             return rs
         raise verify_exceptions.PackagesNotFoundException()
 
     @staticmethod
     @pydantic.validate_call
     async def rpc_account_get_source_code(account_address: typing.Annotated[str, Field(min_length=1)],
-                                          module_name: typing.Annotated[str, Field(min_length=1)] = "") -> str:
+                                          module_name: typing.Annotated[str, Field(min_length=1)] = "",
+                                          config: Config = get_config()
+                                          ) -> str:
         """
         Get source code of a module
         """
-        packages = await AptosRpcUtils.rpc_account_get_package(account_address=account_address)
+        packages = await AptosRpcUtils.rpc_account_get_package(account_address=account_address, config=config)
         needed_module = {}
         all_modules = [{
             'source': module.get('source'),
@@ -78,14 +79,16 @@ class AptosRpcUtils:
     @ staticmethod
     @ pydantic.validate_call
     async def rpc_account_get_bytecode(account_address: typing.Annotated[str, Field(min_length=1)],
-                                       module_name: typing.Annotated[str, Field(min_length=1)]) -> str:
+                                       module_name: typing.Annotated[str, Field(min_length=1)],
+                                       config: Config = get_config()
+                                       ) -> str:
         logger.info(
             f'Start get bytecode of module: {account_address}::{module_name}')
         key = f'local_cache_account_module_bytecode_{account_address}_{module_name}'
-        rs = local_memory.get(key=key)
-        if local_memory.get(key=key):
+        rs = LocalMemory.get(key=key)
+        if LocalMemory.get(key=key):
             return rs
-        sdk_client = await AptosRpcUtils.aptos_rest_client()
+        sdk_client = await AptosRpcUtils.aptos_rest_client(config=config)
         client = sdk_client.client
         request = f"{sdk_client.base_url}/accounts/{account_address}/module/{module_name}"
         response = await client.get(request)
@@ -94,7 +97,7 @@ class AptosRpcUtils:
                                              response.status_code)
 
         rs = response.json()
-        local_memory.set(key=key, value=rs)
+        LocalMemory.set(key=key, value=rs)
         return rs
 
 
@@ -170,7 +173,9 @@ class AptosModuleUtils:
     async def build_from_template(manifest: typing.Annotated[str, Field(min_length=5)],
                                   source_code: typing.Annotated[str, Field(
                                       min_length=10)],
+                                  config: Config = get_config(),
                                   force: bool = False,
+                                  bytecode_compile_version='',
                                   aptos_framework_rev: str = ''
                                   ):
 
@@ -211,8 +216,11 @@ class AptosModuleUtils:
 
         # start build project
         logger.info('Start build project')
+        cmd_cv = ''
+        if bytecode_compile_version:
+            cmd_cv = f'--bytecode-version {bytecode_compile_version}'
         stdout_message, stderr_message = ExecuteCmd.exec(
-            f'cd {config.move_build_path} && aptos move compile')
+            f'cd {config.move_build_path} && aptos move compile {cmd_cv}')
         res = True
         try:
             stdout_message = json.loads(stdout_message)

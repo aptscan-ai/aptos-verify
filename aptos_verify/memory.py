@@ -1,12 +1,14 @@
 
-__store = {}
-
-__all__ = ["set", "get"]
+__all__ = ["LocalMemory"]
 
 
-def get(key, default=None):
-    return __store.get(key, default)
+class LocalMemory():
+    __store = {}
 
+    @staticmethod
+    def get(key, default=None):
+        return LocalMemory.__store.get(key, default)
 
-def set(key, value):
-    __store[key] = value
+    @staticmethod
+    def set(key, value):
+        LocalMemory.__store[key] = value

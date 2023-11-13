@@ -1,17 +1,16 @@
 # This rule will check code that public onchain with current bytecode of one module_id
 from aptos_verify.utils import AptosRpcUtils, AptosBytecodeUtils, AptosModuleUtils
-from aptos_verify.schemas import CmdArgs
-from aptos_verify.config import get_logger, get_config
+from aptos_verify.schemas import Args
+from aptos_verify.config import Config, get_logger, get_config
 from aptos_verify.exceptions import ModuleNotFoundException
 import asyncio
 from aptos_verify.decorators import config_rule
 import aptos_verify.exceptions as verify_exceptions
 
 logger = get_logger(__name__)
-config = get_config()
 
 
-async def get_bytecode_from_source_code_onchain(account_address: str, module_name: str):
+async def get_bytecode_from_source_code_onchain(account_address: str, module_name: str, config: Config = get_config()):
     """
     Get source code onchain and build by a Move Template.
     """
@@ -38,28 +37,34 @@ async def get_bytecode_from_source_code_onchain(account_address: str, module_nam
     except verify_exceptions.CanNotBuildModuleException:
         logger.error(
             "Build with default manifest Move.toml fail, try to replace config [dependencies.AptosFramework] with rev=main.")
-        buid_res = await AptosModuleUtils.build_from_template(manifest=manifest, source_code=merge_source_code_string, force=True, aptos_framework_rev='main')
+        buid_res = await AptosModuleUtils.build_from_template(manifest=manifest,
+                                                              source_code=merge_source_code_string,
+                                                              bytecode_compile_version=config.compile_bytecode_version if config.compile_bytecode_version else '',
+                                                              force=True,
+                                                              aptos_framework_rev='main')
     if buid_res:
         # get bytecode from build source
         byte_from_source = await AptosBytecodeUtils.extract_bytecode_from_build(
             config.move_build_path,
             module_name=module_name
         )
-        logger.info("Build and extract bytecode from source code and manifest successfuly. ")
+        logger.info(
+            "Build and extract bytecode from source code and manifest successfuly. ")
         return byte_from_source
     return None
 
 
 @config_rule(title='Compare bytecode between published bytecode and published source code onchain')
-async def process_compare_bycode(args: CmdArgs, **krawgs):
+async def process_compare_bycode(args: Args, **krawgs):
     """
     This code will compare bytecode from onchain and source code thats deployed and published onchain
     """
     account, module_name = args.module_id.split('::')
+    config = args.config
     task_list = [get_bytecode_from_source_code_onchain(
-        account_address=account, module_name=module_name),
+        account_address=account, module_name=module_name, config=config),
         AptosRpcUtils.rpc_account_get_bytecode(
-            account_address=account, module_name=module_name)]
+            account_address=account, module_name=module_name, config=config)]
     bytecode_from_source, bytecode_info_onchain = await asyncio.gather(
         *task_list
     )

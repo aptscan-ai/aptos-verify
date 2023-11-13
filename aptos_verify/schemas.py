@@ -1,10 +1,11 @@
 from pydantic import BaseModel
 from typing import Optional
+from aptos_verify.config import Config
 
 
-class CmdArgs(BaseModel):
+class Args(BaseModel):
     module_id: str
-    node_url: Optional[str] = ""
+    config: Optional[Config]
 
 
 class OutputResult(BaseModel):

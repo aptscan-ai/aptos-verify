@@ -1,9 +1,8 @@
 import aptos_verify.memory
 from aptos_verify.schemas import OutputResult
 import traceback
-from aptos_verify.config import get_config, get_logger
+from aptos_verify.config import get_logger
 
-config = get_config()
 logger = get_logger(__name__)
 
 
