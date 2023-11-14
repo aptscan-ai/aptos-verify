@@ -2,12 +2,30 @@ import aptos_verify.config
 from pydantic import BaseModel
 import logging
 import os
-import argparse
 from aptos_verify.memory import LocalMemory
 import typing
+try:
+    log_level = LocalMemory.get('global_logging_level', logging.INFO)
+    log_level = int(log_level) if log_level else 0
+    if log_level not in [
+        logging.CRITICAL,
+        logging.FATAL,
+        logging.ERROR,
+        logging.WARNING,
+        logging.WARN,
+        logging.INFO,
+        logging.DEBUG,
+        logging.NOTSET
+    ]:
+        print(f'ERROR: log level is invalid. set default to {logging.INFO}')
+        log_level = logging.INFO
+except:
+    log_level = logging.INFO
 
-
-__store_local_key = 'local_store_global_config'
+logging.basicConfig(
+    level=log_level,
+    format="[%(filename)s:%(lineno)s] %(asctime)s [%(levelname)s] %(message)s" if log_level < 11 else "%(asctime)s [%(levelname)s] %(message)s"
+)
 
 
 class Config(BaseModel):
@@ -26,13 +44,7 @@ class Config(BaseModel):
         return os.path.join(self.root_dir, 'move/current/')
 
 
-def get_logger(name: str, config: Config = None):
-    # Init Logger
-    log_level = config.log_level if config else logging.DEBUG
-    logging.basicConfig(
-        level=log_level,
-        format="[%(filename)s:%(lineno)s] %(asctime)s [%(levelname)s] %(message)s" if log_level < 11 else "%(asctime)s [%(levelname)s] %(message)s"
-    )
+def get_logger(name: str):
     return logging.getLogger(name)
 
 

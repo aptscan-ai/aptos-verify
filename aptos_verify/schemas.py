@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from typing import Optional
-from aptos_verify.config import Config
 import typing
 
 

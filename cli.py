@@ -1,7 +1,7 @@
-from aptos_verify.main import start_verify
-from aptos_verify.schemas import CliArgs, Params
 import asyncio
 from argparse import ArgumentParser
+from aptos_verify.memory import LocalMemory
+from aptos_verify.schemas import CliArgs, Params
 
 
 def parsing_args() -> CliArgs:
@@ -29,7 +29,7 @@ def parsing_args() -> CliArgs:
     if args.rpc:
         kwargs['aptos_rpc_version'] = args.rpc
     if args.loglevel:
-        kwargs['log_level'] = args.loglevel
+        LocalMemory.set('global_logging_level', args.loglevel)
     if args.compileversion:
         kwargs['compile_bytecode_version'] = args.compileversion
 
@@ -42,9 +42,9 @@ def parsing_args() -> CliArgs:
 
 
 if __name__ == '__main__':
-
     args = parsing_args()
-    print(args)
     loop = asyncio.get_event_loop()
+    from aptos_verify.main import start_verify
     loop.run_until_complete(start_verify(args))
     loop.close()
+
