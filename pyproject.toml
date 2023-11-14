@@ -1,9 +1,15 @@
 [tool.poetry]
 name = "aptos-verify"
-version = "0.1.0"
-description = "A Library help verifing aptos module"
-authors = ["phongpham"]
+version = "1.0.0"
+authors = ["Phong Pham"]
+description = "A small example package"
 readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+packages = [{include = "aptos_verify"}]
 
 [tool.poetry.dependencies]
 python = "^3.8.1"
@@ -68,3 +74,10 @@ tomli-w = "^1.0.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[project.urls]
+"Homepage" = "https://github.com/aptscan-ai/aptos-verify"
+"Bug Tracker" = "https://github.com/aptscan-ai/aptos-verify/issues"
+
+[tool.poetry.scripts]
+aptos-verify = 'aptos_verify.cli:cli'

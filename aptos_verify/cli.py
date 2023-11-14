@@ -41,10 +41,7 @@ def parsing_args() -> CliArgs:
     )
 
 
-if __name__ == '__main__':
+def run():
     args = parsing_args()
-    loop = asyncio.get_event_loop()
     from aptos_verify.main import start_verify
-    loop.run_until_complete(start_verify(args))
-    loop.close()
-
+    asyncio.run(start_verify(args))

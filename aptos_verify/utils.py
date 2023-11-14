@@ -78,8 +78,8 @@ class AptosRpcUtils:
             'related_modules': [k for k in all_modules if k.get('module_name') != module_name]
         }
 
-    @ staticmethod
-    @ pydantic.validate_call
+    @staticmethod
+    @pydantic.validate_call
     async def rpc_account_get_bytecode(account_address: typing.Annotated[str, Field(min_length=1)],
                                        module_name: typing.Annotated[str, Field(min_length=1)],
                                        params: Params = Params()
@@ -181,14 +181,14 @@ class AptosModuleUtils:
                                   aptos_framework_rev: str = ''
                                   ):
         config = get_config()
-        
+
         if force:
             # remove all files on move_build_path
             ExecuteCmd.exec(
                 f'rm -r {os.path.join(config.move_build_path,"*")}')
         elif os.path.isfile(os.path.join(config.move_build_path, AptosModuleUtils.FILE_LOCK_FOLDER)):
             raise verify_exceptions.CurrentBuildModuleInProcessException()
-        
+
         # copy all file on template to current path
         ExecuteCmd.exec(
             f'cp -r {os.path.join(config.move_template_path,"*")} {os.path.join(config.move_build_path,"")}')
