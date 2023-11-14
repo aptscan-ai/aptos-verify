@@ -162,7 +162,7 @@ class ExecuteCmd():
         error_message = std_err.decode()
         stdout_message = std_out.decode()
         logger.debug(
-            f'Exec cmd: {cmd}.\n Stdout:\n {stdout_message} \n Stderror: \n{error_message} \n')
+            f'Exec cmd: {cmd} \n Stdout:\n {stdout_message} \n Stderror: \n{error_message} \n')
         return stdout_message, error_message
 
 
@@ -180,52 +180,53 @@ class AptosModuleUtils:
                                   bytecode_compile_version='',
                                   aptos_framework_rev: str = ''
                                   ):
-        config = get_config()
-
-        if force:
-            # remove all files on move_build_path
-            ExecuteCmd.exec(
-                f'rm -r {os.path.join(config.move_build_path,"*")}')
-        elif os.path.isfile(os.path.join(config.move_build_path, AptosModuleUtils.FILE_LOCK_FOLDER)):
-            raise verify_exceptions.CurrentBuildModuleInProcessException()
-
-        # copy all file on template to current path
-        ExecuteCmd.exec(
-            f'cp -r {os.path.join(config.move_template_path,"*")} {os.path.join(config.move_build_path,"")}')
-
-        # replace template with given params
-        logger.info('Create Move.toml from manifest')
-        if aptos_framework_rev != '':
-            parse_toml = tomli.loads(manifest)
-            dependencies = parse_toml['dependencies']
-            for key, element in dependencies.items():
-                if key in ['AptosFramework', 'AptosStdlib']:
-                    element['rev'] = aptos_framework_rev
-                    dependencies[key] = element
-
-            parse_toml['dependencies'] = dependencies
-            manifest = tomli_w.dumps(parse_toml)
-
-        move_toml_path = os.path.join(config.move_build_path, "Move.toml")
-        with open(move_toml_path, 'w') as filetowrite:
-            filetowrite.write(manifest)
-        logger.info('Create Move.toml done')
-
-        logger.info('Create code.move to store source code move')
-        code_path = os.path.join(config.move_build_path, "sources/code.move")
-        with open(code_path, 'w') as filetowrite:
-            filetowrite.write(source_code)
-        logger.info('Create sources/code.move done')
-
-        # start build project
-        logger.info('Start build project')
-        cmd_cv = ''
-        if bytecode_compile_version:
-            cmd_cv = f'--bytecode-version {bytecode_compile_version}'
-        stdout_message, stderr_message = ExecuteCmd.exec(
-            f'cd {config.move_build_path} && aptos move compile {cmd_cv}')
-        res = True
+        stdout_message, stderr_message = '', ''
         try:
+            config = get_config()
+            if force:
+                # remove all files on move_build_path
+                ExecuteCmd.exec(
+                    f'rm -r {os.path.join(config.move_build_path,"*")}')
+            elif os.path.isfile(os.path.join(config.move_build_path, AptosModuleUtils.FILE_LOCK_FOLDER)):
+                raise verify_exceptions.CurrentBuildModuleInProcessException()
+
+            # copy all file on template to current path
+            ExecuteCmd.exec(
+                f'cp -r {os.path.join(config.move_template_path,"*")} {os.path.join(config.move_build_path,"")}')
+
+            # replace template with given params
+            logger.info('Create Move.toml from manifest')
+            if aptos_framework_rev != '':
+                parse_toml = tomli.loads(manifest)
+                dependencies = parse_toml['dependencies']
+                for key, element in dependencies.items():
+                    if key in ['AptosFramework', 'AptosStdlib']:
+                        element['rev'] = aptos_framework_rev
+                        dependencies[key] = element
+
+                parse_toml['dependencies'] = dependencies
+                manifest = tomli_w.dumps(parse_toml)
+
+            move_toml_path = os.path.join(config.move_build_path, "Move.toml")
+            with open(move_toml_path, 'w') as filetowrite:
+                filetowrite.write(manifest)
+            logger.info('Create Move.toml done')
+
+            logger.info('Create code.move to store source code move')
+            code_path = os.path.join(
+                config.move_build_path, "sources/code.move")
+            with open(code_path, 'w') as filetowrite:
+                filetowrite.write(source_code)
+            logger.info('Create sources/code.move done')
+
+            # start build project
+            logger.info('Start build project')
+            cmd_cv = ''
+            if bytecode_compile_version:
+                cmd_cv = f'--bytecode-version {bytecode_compile_version}'
+            stdout_message, stderr_message = ExecuteCmd.exec(
+                f'cd {config.move_build_path} && aptos move compile {cmd_cv}')
+            res = True
             stdout_message = json.loads(stdout_message)
             if not stdout_message.get('Result'):
                 raise ValueError()

@@ -41,7 +41,7 @@ class Config(BaseModel):
 
     @property
     def move_build_path(self) -> str:
-        return os.path.join(self.root_dir, 'move/current/')
+        return os.path.join(self.root_dir, 'move/build/')
 
 
 def get_logger(name: str):

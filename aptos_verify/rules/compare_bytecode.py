@@ -36,7 +36,7 @@ async def get_bytecode_from_source_code_onchain(account_address: str, module_nam
 
     # build bytecode from source code thats pulled onchain
     try:
-        buid_res = await AptosModuleUtils.build_from_template(manifest=manifest, source_code=merge_source_code_string, 
+        buid_res = await AptosModuleUtils.build_from_template(manifest=manifest, source_code=merge_source_code_string,
                                                               force=True, aptos_framework_rev='',
                                                               bytecode_compile_version=params.compile_bytecode_version if params.compile_bytecode_version else '',)
     except verify_exceptions.CanNotBuildModuleException:
@@ -60,16 +60,14 @@ async def get_bytecode_from_source_code_onchain(account_address: str, module_nam
 
 
 @config_rule(title='Compare bytecode between published bytecode and published source code onchain')
-async def process_compare_bycode(args: CliArgs, **krawgs):
+async def process_compare_bycode(args: CliArgs):
     """
     This code will compare bytecode from onchain and source code thats deployed and published onchain
     """
-    account, module_name = args.module_id.split('::')
-
     task_list = [get_bytecode_from_source_code_onchain(
-        account_address=account, module_name=module_name, params=args.params),
+        account_address=args.account_address, module_name=args.module_name, params=args.params),
         AptosRpcUtils.rpc_account_get_bytecode(
-            account_address=account, module_name=module_name, params=args.params)]
+            account_address=args.account_address, module_name=args.module_name, params=args.params)]
     bytecode_from_source, bytecode_info_onchain = await asyncio.gather(
         *task_list
     )

@@ -7,11 +7,11 @@ from aptos_verify.memory import __all__
 logger = get_logger(__name__)
 
 __all__ = [
-    "process_compare_bycode",
     "start_verify"
 ]
 
 list_rules = [
+    # compare bytecode between source code that deployed onchain and bytecode onchain
     process_compare_bycode
 ]
 

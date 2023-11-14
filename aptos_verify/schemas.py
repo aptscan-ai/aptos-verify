@@ -1,6 +1,9 @@
 from pydantic import BaseModel
+import traceback
 from typing import Optional
 import typing
+from pydantic import BaseModel, Field, field_validator
+from aptos_verify.exceptions import ModuleParamIsInvalid
 
 
 class Params(BaseModel):
@@ -14,6 +17,26 @@ class CliArgs(BaseModel):
     module_id: str
     params: Optional[Params]
 
+    @field_validator('module_id')
+    @classmethod
+    def validate_module(cls, v: str) -> str:
+        if v == '' or not v:
+            raise ModuleParamIsInvalid()
+        address, module_name = v.split('::')
+        if not address or not module_name:
+            raise ModuleParamIsInvalid()
+        return v
+
+    @property
+    def account_address(self):
+        address, module_name = self.module_id.split('::')
+        return address
+
+    @property
+    def module_name(self):
+        address, module_name = self.module_id.split('::')
+        return module_name
+
 
 class OutputResult(BaseModel):
     title: str
@@ -22,3 +45,5 @@ class OutputResult(BaseModel):
     error_code: Optional[int] = 0
     exeption_name: Optional[str] = ""
     result: bool | None
+    traceback: Optional[str] = ""
+    error_message: Optional[str] = ""
