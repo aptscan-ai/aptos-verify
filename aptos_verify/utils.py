@@ -120,10 +120,12 @@ class AptosBytecodeUtils:
 
     @staticmethod
     @pydantic.validate_call
-    async def extract_bytecode_from_build(path: typing.Annotated[str, Field(min_length=1)], module_name: str = '') -> str:
+    async def extract_bytecode_from_build(move_path: typing.Annotated[str, Field(min_length=1)], module_name: str = '') -> str:
         """
         This method will extract bytecode from a build project move
         """
+        config = get_config()
+        path = os.path.join(config.move_build_path, move_path)
         logger.info(
             f"Start extract bytecode from path: {path}. (module name: [{module_name}])")
         with open(os.path.join(path, "Move.toml"), "rb") as f:
@@ -172,10 +174,32 @@ class AptosModuleUtils:
 
     @staticmethod
     @pydantic.validate_call
+    async def clean_move_build_path(move_build_path: typing.Annotated[str, Field(min_length=1)], delete_folder=False):
+        logger.debug(f"Start clean move build path: {move_build_path}")
+        config = get_config()
+        path = os.path.join(config.move_build_path, move_build_path)
+        try:
+            ExecuteCmd.exec(
+                f'rm -r {os.path.join(path, "*" if delete_folder is False else "")}')
+        except BaseException as e:
+            logger.warn(f'Cannot remove path: {path} because of {str(e)}')
+
+    @staticmethod
+    @pydantic.validate_call
+    async def create_move_build_path(move_build_path: typing.Annotated[str, Field(min_length=1)]):
+        logger.debug(f"Start create move build path: {move_build_path}")
+        config = get_config()
+        path = os.path.join(config.move_build_path, move_build_path)
+        ExecuteCmd.exec(
+            f'mkdir -p {path}')
+
+    @staticmethod
+    @pydantic.validate_call
     async def build_from_template(manifest: typing.Annotated[str, Field(min_length=5)],
                                   source_code: typing.Annotated[str, Field(
                                       min_length=10)],
-                                  params: Params = Params(),
+                                  move_build_path: typing.Annotated[str, Field(
+                                      min_length=1)],
                                   force: bool = False,
                                   bytecode_compile_version='',
                                   aptos_framework_rev: str = ''
@@ -183,16 +207,20 @@ class AptosModuleUtils:
         stdout_message, stderr_message = '', ''
         try:
             config = get_config()
+            real_move_build_path = os.path.join(
+                config.move_build_path, move_build_path)
+            logger.info(
+                f"Start build module and save into path: {real_move_build_path}")
+            await AptosModuleUtils.create_move_build_path(real_move_build_path)
             if force:
                 # remove all files on move_build_path
-                ExecuteCmd.exec(
-                    f'rm -r {os.path.join(config.move_build_path,"*")}')
-            elif os.path.isfile(os.path.join(config.move_build_path, AptosModuleUtils.FILE_LOCK_FOLDER)):
+                await AptosModuleUtils.clean_move_build_path(real_move_build_path)
+            elif os.path.isfile(os.path.join(real_move_build_path, AptosModuleUtils.FILE_LOCK_FOLDER)):
                 raise verify_exceptions.CurrentBuildModuleInProcessException()
 
             # copy all file on template to current path
             ExecuteCmd.exec(
-                f'cp -r {os.path.join(config.move_template_path,"*")} {os.path.join(config.move_build_path,"")}')
+                f'cp -rip {os.path.join(config.move_template_path,"*")} {os.path.join(real_move_build_path,"")}')
 
             # replace template with given params
             logger.info('Create Move.toml from manifest')
@@ -207,14 +235,14 @@ class AptosModuleUtils:
                 parse_toml['dependencies'] = dependencies
                 manifest = tomli_w.dumps(parse_toml)
 
-            move_toml_path = os.path.join(config.move_build_path, "Move.toml")
+            move_toml_path = os.path.join(real_move_build_path, "Move.toml")
             with open(move_toml_path, 'w') as filetowrite:
                 filetowrite.write(manifest)
             logger.info('Create Move.toml done')
 
             logger.info('Create code.move to store source code move')
             code_path = os.path.join(
-                config.move_build_path, "sources/code.move")
+                real_move_build_path, "sources/code.move")
             with open(code_path, 'w') as filetowrite:
                 filetowrite.write(source_code)
             logger.info('Create sources/code.move done')
@@ -225,7 +253,7 @@ class AptosModuleUtils:
             if bytecode_compile_version:
                 cmd_cv = f'--bytecode-version {bytecode_compile_version}'
             stdout_message, stderr_message = ExecuteCmd.exec(
-                f'cd {config.move_build_path} && aptos move compile {cmd_cv}')
+                f'cd {real_move_build_path} && aptos move compile {cmd_cv}')
             res = True
             stdout_message = json.loads(stdout_message)
             if not stdout_message.get('Result'):
