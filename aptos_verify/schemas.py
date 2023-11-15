@@ -4,6 +4,8 @@ from typing import Optional
 import typing
 from pydantic import BaseModel, Field, field_validator
 from aptos_verify.exceptions import ModuleParamIsInvalid
+import os
+from pathlib import Path
 
 
 class Params(BaseModel):
@@ -11,6 +13,8 @@ class Params(BaseModel):
     aptos_rpc_version: typing.Optional[str] = 'v1'
     aptos_node_url: typing.Optional[str] = 'https://fullnode.mainnet.aptoslabs.com'
     compile_bytecode_version: typing.Optional[str] = ''
+    move_build_path: typing.Optional[str] = os.path.join(
+        str(Path.home()), 'aptos_verify_tmp')
 
 
 class CliArgs(BaseModel):

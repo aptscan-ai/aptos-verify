@@ -33,15 +33,12 @@ class Config(BaseModel):
 
     @property
     def root_dir(self) -> str:
-        return f'{os.path.abspath(os.curdir)}/'
+        return f'{os.path.dirname(os.path.realpath(__file__))}/../'
 
     @property
     def move_template_path(self) -> str:
         return os.path.join(self.root_dir, 'move/template/')
 
-    @property
-    def move_build_path(self) -> str:
-        return os.path.join(self.root_dir, 'move/build/')
 
 
 def get_logger(name: str):

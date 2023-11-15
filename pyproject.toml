@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aptos-verify"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Phong Pham"]
 description = "A small example package"
 readme = "README.md"
@@ -10,6 +10,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 packages = [{include = "aptos_verify"}]
+repository = "https://github.com/aptscan-ai/aptos-verify"
 
 [tool.poetry.dependencies]
 python = "^3.8.1"
@@ -82,4 +83,4 @@ build-backend = "poetry.core.masonry.api"
 "Bug Tracker" = "https://github.com/aptscan-ai/aptos-verify/issues"
 
 [tool.poetry.scripts]
-aptos-verify = 'aptos_verify.cli:cli'
+aptos-verify = 'aptos_verify.cli:run'
