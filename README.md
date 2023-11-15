@@ -4,6 +4,20 @@ Aptos Verify is a Python library for verifying a module on Aptos Blockchain
 
 ## Installation
 
+Before install package, you need to setup Rust, Cargo and Aptos Cli
+Docs: 
+
+install Rust and Cargo: https://learning-rust.github.io/docs/installation/
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+install Aptos Cli: https://aptos.dev/tools/aptos-cli/install-cli/
+
+```bash
+curl -fsSL "https://aptos.dev/scripts/install_cli.py" | python3
+```
+
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install aptos_verify.
 
 ```bash
@@ -37,6 +51,15 @@ You can use cli to verify module
 aptos-verify -m 0x8d2d7bcde13b2513617df3f98cdd5d0e4b9f714c6308b9204fe18ad900d92609::admin
 ```
 
+Results format log:
+```log
+ **************** Rule: Compare bytecode between published bytecode and published source code onchain *****************
+                    Result: True
+                    Error Code: 0
+                    Message: Verify success
+                    Exception Class: 
+```
+
 Run tests
 ``` cli
 pytest -s
@@ -50,9 +73,30 @@ Please make sure to update tests as appropriate.
 
 ## Error Code
 List error codes  that returned from tool
-```
-1: Package Not Found
-2: Module Not Found
-3: Module Has No Source Code
-```
 
+  <table>
+    <thead>
+      <tr>
+        <th>Error Code</th>
+        <th>Message</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>0</td>
+            <td>No Errors</td>
+        </tr>
+        <tr>
+            <td>1</td>
+            <td>Package Not Found</td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>Module Not Found</td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td>Module Has No Source Code</td>
+        </tr>
+    </tbody>
+  </table>
