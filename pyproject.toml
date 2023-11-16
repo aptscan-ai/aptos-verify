@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aptos-verify"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["Phong Pham"]
 description = "A small example package"
 readme = "README.md"

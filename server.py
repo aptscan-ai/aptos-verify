@@ -10,7 +10,10 @@ import time
 from fastapi.responses import JSONResponse
 from aptos_verify.rules.compare_bytecode import logger
 app = FastAPI()
-load_dotenv(dotenv_path='./.env')
+try:
+    load_dotenv(dotenv_path='.env')
+except BaseException as e:
+    pass
 
 
 # Enable CORS
