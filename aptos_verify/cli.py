@@ -42,7 +42,6 @@ def parsing_args() -> CliArgs:
 
     if args.buidpath:
         kwargs['move_build_path'] = args.buidpath
-
     params = Params(**kwargs)
 
     return CliArgs(
@@ -52,6 +51,10 @@ def parsing_args() -> CliArgs:
 
 
 def run():
-    args = parsing_args()
+    try:
+        args = parsing_args()
+    except BaseException as e:
+        print(e)
+        exit()
     from aptos_verify.main import start_verify
     asyncio.run(start_verify(args))

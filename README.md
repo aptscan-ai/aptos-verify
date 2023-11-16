@@ -100,5 +100,9 @@ List error codes  that returned from tool
             <td>3</td>
             <td>Module Has No Source Code</td>
         </tr>
+        <tr>
+            <td>4</td>
+            <td>Validation Error</td>
+        </tr>
     </tbody>
   </table>
