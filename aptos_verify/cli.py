@@ -34,7 +34,7 @@ def parsing_args() -> CliArgs:
     kwargs = {}
     # Mapping args to setup first config
     if args.rpc:
-        kwargs['aptos_rpc_version'] = args.rpc
+        kwargs['aptos_node_url'] = args.rpc
     if args.loglevel:
         LocalMemory.set('global_logging_level', args.loglevel)
     if args.compileversion:

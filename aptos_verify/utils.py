@@ -173,11 +173,16 @@ class AptosModuleUtils:
 
     @staticmethod
     @pydantic.validate_call
-    async def clean_move_build_path(path: typing.Annotated[str, Field(min_length=1)], delete_folder=False):
+    async def clean_move_build_path(path: typing.Annotated[str, Field(min_length=3)], delete_folder=False):
         logger.debug(f"Start clean move build path: {path}")
         try:
+            full_path = {os.path.join(
+                path, "*" if delete_folder is False else "")}
+            if full_path.strip() in ['/', '/*', '*']:
+                raise ValueError(
+                    f'{full_path} is invalid. path: /,/*,* are not excepted')
             ExecuteCmd.exec(
-                f'rm -r {os.path.join(path, "*" if delete_folder is False else "")}')
+                f'rm -r {full_path}')
         except BaseException as e:
             logger.warn(f'Cannot remove path: {path} because of {str(e)}')
 

@@ -26,6 +26,11 @@ pip install aptos_verify
 
 ## Usage
 
+Use with CLI
+``` cli
+aptos-verify -m 0x8d2d7bcde13b2513617df3f98cdd5d0e4b9f714c6308b9204fe18ad900d92609::admin
+```
+Use with sdk
 ```python
 from aptos_verify.main import start_verify
 from aptos_verify.schemas import CliArgs, Params
@@ -46,10 +51,7 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
-You can use cli to verify module
-``` cli
-aptos-verify -m 0x8d2d7bcde13b2513617df3f98cdd5d0e4b9f714c6308b9204fe18ad900d92609::admin
-```
+
 
 Results format log:
 ```log

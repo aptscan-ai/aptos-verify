@@ -26,7 +26,8 @@ class CliArgs(BaseModel):
     def validate_module(cls, v: str) -> str:
         if v == '' or not v:
             raise ModuleParamIsInvalid()
-        address, module_name = v.split('::')
+        spl = v.split('::')
+        address, module_name = spl if len(spl) > 1 else ("","")
         if not address or not module_name:
             raise ModuleParamIsInvalid()
         return v
