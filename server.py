@@ -72,7 +72,7 @@ async def api_verify(request: Request, module: str, rpc: typing.Optional[str] = 
 def create_server():
     config = get_config()
     port = int(os.getenv('HTTP_PORT') or 0) or config.default_http_port
-    host = (os.getenv('HTTP_HOST') or '') or config.default_http_host
+    host = (os.getenv('HTTP_HOST') or '0.0.0.0') or config.default_http_host
 
     uvicorn.run(app, host=host,
                 port=port)

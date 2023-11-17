@@ -23,12 +23,29 @@ Use the package manager [pip](https://pip.pypa.io/en/stable/) to install aptos_v
 ```bash
 pip install aptos_verify
 ```
+Run with docker by load image from folder docker
+```
+Option 1 Build docker: 
+docker build -t aptos-verify-dk . 
 
+Option 2 Load docker by image on folder docker: 
+docker load -i aptos-verify-dk.tar   
+
+Start container: 
+docker run -d -p 9998:9998 aptos-verify-dk
+```
 ## Usage
 
 Use with CLI
 ``` cli
 aptos-verify -m 0x8d2d7bcde13b2513617df3f98cdd5d0e4b9f714c6308b9204fe18ad900d92609::admin
+
+Result:
+**************** Rule: Compare bytecode between published bytecode and published source code onchain *****************
+                    Result: True
+                    Error Code: 0
+                    Message: Verify success
+                    Exception Class: 
 ```
 Use with sdk
 ```python
@@ -51,16 +68,17 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+Use with docker and API
+```api
+http://localhost:9998/verify/<module_address>
 
+Example: 
+http://localhost:9998/verify/0x8d2d7bcde13b2513617df3f98cdd5d0e4b9f714c6308b9204fe18ad900d92609::admin
 
-Results format log:
-```log
- **************** Rule: Compare bytecode between published bytecode and published source code onchain *****************
-                    Result: True
-                    Error Code: 0
-                    Message: Verify success
-                    Exception Class: 
+Result:
+{"message":"success","data":[{"title":"Compare bytecode between published bytecode and published source code onchain","message":"Verify success","is_skip":false,"error_code":0,"exeption_name":"","result":true,"traceback":"","error_message":""}]}
 ```
+
 
 Run tests
 ``` cli

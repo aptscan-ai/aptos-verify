@@ -31,7 +31,7 @@ logging.basicConfig(
 class Config(BaseModel):
     log_level: typing.Optional[int] = logging.INFO
     default_http_port: int = 9998
-    default_http_host: str = 'localhost'
+    default_http_host: str = '0.0.0.0'
 
     @property
     def root_dir(self) -> str:
