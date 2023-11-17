@@ -28,7 +28,7 @@ Run with docker by load image from folder docker
 Option 1 Build docker: 
 docker build -t aptos-verify-dk . 
 
-Option 2 Load docker by image on folder docker: 
+Option 2 Load docker by image: 
 docker load -i aptos-verify-dk.tar   
 
 Start container: 
