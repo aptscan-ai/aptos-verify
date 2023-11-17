@@ -1,9 +1,9 @@
-import aptos_verify.config
 from pydantic import BaseModel
 import logging
 import os
 from aptos_verify.memory import LocalMemory
 import typing
+import pathlib
 try:
     log_level = LocalMemory.get('global_logging_level', logging.INFO)
     log_level = int(log_level) if log_level else 0
@@ -30,18 +30,16 @@ logging.basicConfig(
 
 class Config(BaseModel):
     log_level: typing.Optional[int] = logging.INFO
+    default_http_port: int = 9998
+    default_http_host: str = '0.0.0.0'
 
     @property
     def root_dir(self) -> str:
-        return f'{os.path.abspath(os.curdir)}/'
+        return f'{os.path.dirname(os.path.realpath(__file__))}/../'
 
     @property
     def move_template_path(self) -> str:
         return os.path.join(self.root_dir, 'move/template/')
-
-    @property
-    def move_build_path(self) -> str:
-        return os.path.join(self.root_dir, 'move/build/')
 
 
 def get_logger(name: str):

@@ -3,7 +3,6 @@ from aptos_verify.schemas import CliArgs, OutputResult
 import traceback
 from aptos_verify.config import get_logger
 import traceback
-from aptos_verify.exceptions import ModuleParamIsInvalid
 logger = get_logger(__name__)
 
 

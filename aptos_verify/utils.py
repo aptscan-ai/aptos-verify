@@ -124,8 +124,7 @@ class AptosBytecodeUtils:
         """
         This method will extract bytecode from a build project move
         """
-        config = get_config()
-        path = os.path.join(config.move_build_path, move_path)
+        path = os.path.join(move_path)
         logger.info(
             f"Start extract bytecode from path: {path}. (module name: [{module_name}])")
         with open(os.path.join(path, "Move.toml"), "rb") as f:
@@ -174,22 +173,24 @@ class AptosModuleUtils:
 
     @staticmethod
     @pydantic.validate_call
-    async def clean_move_build_path(move_build_path: typing.Annotated[str, Field(min_length=1)], delete_folder=False):
-        logger.debug(f"Start clean move build path: {move_build_path}")
-        config = get_config()
-        path = os.path.join(config.move_build_path, move_build_path)
+    async def clean_move_build_path(path: typing.Annotated[str, Field(min_length=3)], delete_folder=False):
+        logger.debug(f"Start clean move build path: {path}")
         try:
+            full_path = {os.path.join(
+                path, "*" if delete_folder is False else "")}
+            if full_path.strip() in ['/', '/*', '*']:
+                raise ValueError(
+                    f'{full_path} is invalid. path: /,/*,* are not excepted')
             ExecuteCmd.exec(
-                f'rm -r {os.path.join(path, "*" if delete_folder is False else "")}')
+                f'rm -r {full_path}')
         except BaseException as e:
             logger.warn(f'Cannot remove path: {path} because of {str(e)}')
 
     @staticmethod
     @pydantic.validate_call
-    async def create_move_build_path(move_build_path: typing.Annotated[str, Field(min_length=1)]):
-        logger.debug(f"Start create move build path: {move_build_path}")
+    async def create_move_build_path(path: typing.Annotated[str, Field(min_length=1)]):
+        logger.debug(f"Start create move build path: {path}")
         config = get_config()
-        path = os.path.join(config.move_build_path, move_build_path)
         ExecuteCmd.exec(
             f'mkdir -p {path}')
 
@@ -207,8 +208,7 @@ class AptosModuleUtils:
         stdout_message, stderr_message = '', ''
         try:
             config = get_config()
-            real_move_build_path = os.path.join(
-                config.move_build_path, move_build_path)
+            real_move_build_path = move_build_path
             logger.info(
                 f"Start build module and save into path: {real_move_build_path}")
             await AptosModuleUtils.create_move_build_path(real_move_build_path)

@@ -11,8 +11,8 @@ class VerifyExceptionBase(BaseException):
         return super().__init__(f'{self.error_code[1]}. {message}')
 
 
-class ModuleParamIsInvalid(VerifyExceptionBase):
-    error_code = OutputErrorCode.MODULE_STRING_IS_INVALID.value
+class ValidationError(VerifyExceptionBase):
+    error_code = OutputErrorCode.VALIDATE_PARAM_ERROR.value
 
 
 class PackagesNotFoundException(VerifyExceptionBase):

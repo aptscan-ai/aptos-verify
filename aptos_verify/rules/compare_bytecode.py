@@ -7,6 +7,7 @@ import asyncio
 from aptos_verify.decorators import config_rule
 import aptos_verify.exceptions as verify_exceptions
 import time
+import os
 
 logger = get_logger(__name__)
 
@@ -24,8 +25,6 @@ async def get_bytecode_from_source_code_onchain(account_address: str,
     module_data = await AptosRpcUtils.rpc_account_get_source_code(account_address=account_address, module_name=module_name)
     flat_modules = [module_data.get('module')] + \
         module_data.get('related_modules')
-
-    config = get_config()
 
     merge_source_code_string = ""
     parsing_manifest = None
@@ -56,7 +55,7 @@ async def get_bytecode_from_source_code_onchain(account_address: str,
             '\n' + decompressed_source_code
 
     # build bytecode from source code thats pulled onchain
-    move_build_path = f'buiding_{account_address}_{int(round(time.time() * 1000))}'
+    move_build_path = os.path.join(params.move_build_path,f'buiding_{account_address}_{int(round(time.time() * 1000))}')
     try:
         buid_res = await AptosModuleUtils.build_from_template(manifest=tomli_w.dumps(parsing_manifest),
                                                               source_code=merge_source_code_string,
