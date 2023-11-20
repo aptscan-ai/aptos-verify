@@ -1,7 +1,6 @@
 annotated-types==0.6.0
 anyio==3.7.1
 aptos-sdk==0.7.1
-aptos-verify==1.0.2
 autopep8==2.0.4
 build==1.0.3
 CacheControl==0.13.1
