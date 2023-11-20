@@ -5,7 +5,7 @@ Aptos Verify is a Python library for verifying a module on Aptos Blockchain
 ## Installation
 
 Before install package, you need to setup Rust, Cargo and Aptos Cli
-Docs: 
+ 
 
 install Rust and Cargo: https://learning-rust.github.io/docs/installation/
 
