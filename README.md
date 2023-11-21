@@ -21,7 +21,7 @@ curl -fsSL "https://aptos.dev/scripts/install_cli.py" | python3
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install aptos_verify.
 
 ```bash
-pip install aptos_verify
+pip install aptos-verify
 ```
 Run with docker by load image from folder docker
 ```
