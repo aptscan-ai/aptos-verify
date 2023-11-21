@@ -39,7 +39,7 @@ class Config(BaseModel):
 
     @property
     def move_template_path(self) -> str:
-        return os.path.join(self.root_dir, 'move/template/')
+        return os.path.join(os.path.dirname(os.path.realpath(__file__)), 'move/template/')
 
 
 def get_logger(name: str):
