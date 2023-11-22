@@ -1,4 +1,3 @@
-from dotenv import load_dotenv
 import os
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +10,7 @@ from fastapi.responses import JSONResponse
 from aptos_verify.rules.compare_bytecode import logger
 app = FastAPI()
 try:
+    from dotenv import load_dotenv
     load_dotenv(dotenv_path='.env')
 except BaseException as e:
     pass
