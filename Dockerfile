@@ -3,11 +3,11 @@ WORKDIR /usr/src/server
 COPY server.py . 
 COPY aptos_verify/ aptos_verify/
 COPY pyproject.toml .
-COPY move/ move/
 COPY requirement.txt .
 
 RUN apt-get update && apt-get install -y curl
 RUN apt install python3 python3-pip -y
+RUN apt-get -y install git
 RUN apt install -y build-essential libssl-dev libffi-dev python3-dev 
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
@@ -19,7 +19,7 @@ ENV PATH="/root/.local/bin:$PATH"
 
 RUN pip install poetry==1.7.0 && poetry install && pip install -r requirement.txt
 
-
+ENV LOG_LEVEL=10
 ARG HTTP_PORT=9998
 
 EXPOSE ${HTTP_PORT}

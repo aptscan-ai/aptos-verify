@@ -5,7 +5,13 @@ from aptos_verify.memory import LocalMemory
 import typing
 import pathlib
 try:
-    log_level = LocalMemory.get('global_logging_level', logging.INFO)
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path='.env')
+except BaseException as e:
+    pass
+
+try:
+    log_level = LocalMemory.get('global_logging_level') or os.getenv('LOG_LEVEL') or logging.INFO
     log_level = int(log_level) if log_level else 0
     if log_level not in [
         logging.CRITICAL,
@@ -39,7 +45,7 @@ class Config(BaseModel):
 
     @property
     def move_template_path(self) -> str:
-        return os.path.join(self.root_dir, 'move/template/')
+        return os.path.join(os.path.dirname(os.path.realpath(__file__)), 'move/template/')
 
 
 def get_logger(name: str):
