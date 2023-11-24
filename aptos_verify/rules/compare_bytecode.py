@@ -1,6 +1,6 @@
 # This rule will check code that public onchain with current bytecode of one module_id
 from aptos_verify.utils import AptosRpcUtils, AptosBytecodeUtils, AptosModuleUtils
-from aptos_verify.schemas import CliArgs, Params
+from aptos_verify.schemas import OutputResult, VerifyArgs
 from aptos_verify.config import Config, get_logger, get_config
 from aptos_verify.exceptions import ModuleNotFoundException
 import asyncio
@@ -12,17 +12,20 @@ import os
 logger = get_logger(__name__)
 
 
-async def get_bytecode_from_source_code_onchain(account_address: str,
-                                                module_name: str,
-                                                params: Params = Params(),
-                                                keep_path_after_build=False):
+async def get_bytecode_from_source_code_onchain(move_build_path: str,
+                                                params: VerifyArgs,
+                                                ):
     """
     Get source code onchain and build by a Move Template.
     """
     import tomli_w
     import tomli
     # get source code onchain
-    module_data = await AptosRpcUtils.rpc_account_get_source_code(account_address=account_address, module_name=module_name)
+    module_data = await AptosRpcUtils.rpc_account_get_source_code(params)
+
+    account_address = params.account_address
+    module_name = params.module_name
+
     flat_modules = [module_data.get('module')] + \
         module_data.get('related_modules')
 
@@ -55,7 +58,7 @@ async def get_bytecode_from_source_code_onchain(account_address: str,
             '\n' + decompressed_source_code
 
     # build bytecode from source code thats pulled onchain
-    move_build_path = os.path.join(params.move_build_path,f'buiding_{account_address}_{int(round(time.time() * 1000))}')
+
     try:
         buid_res = await AptosModuleUtils.build_from_template(manifest=tomli_w.dumps(parsing_manifest),
                                                               source_code=merge_source_code_string,
@@ -80,28 +83,20 @@ async def get_bytecode_from_source_code_onchain(account_address: str,
         )
         logger.info(
             "Build and extract bytecode from source code and manifest successfuly. ")
-        # clean path
-        if not keep_path_after_build:
-            await AptosModuleUtils.clean_move_build_path(move_build_path=move_build_path, delete_folder=True)
         return byte_from_source
     return None
 
 
 @config_rule(title='Compare bytecode between published bytecode and published source code onchain')
-async def process_compare_bycode(args: CliArgs):
+async def process_compare_bycode(args: VerifyArgs):
     """
     This code will compare bytecode from onchain and source code thats deployed and published onchain
     """
-    task_list = [get_bytecode_from_source_code_onchain(
-        account_address=args.account_address,
-        module_name=args.module_name,
-        params=args.params,
-        keep_path_after_build=logger.level < 20),
-        AptosRpcUtils.rpc_account_get_bytecode(
-            account_address=args.account_address,
-            module_name=args.module_name,
-            params=args.params
-    )]
+    move_build_path = os.path.join(
+        args.move_build_path, f'buiding_{args.account_address}_{int(round(time.time() * 1000))}')
+
+    task_list = [get_bytecode_from_source_code_onchain(move_build_path=move_build_path, params=args),
+                 AptosRpcUtils.rpc_account_get_bytecode(params=args)]
     bytecode_from_source, bytecode_info_onchain = await asyncio.gather(
         *task_list
     )
@@ -118,4 +113,6 @@ async def process_compare_bycode(args: CliArgs):
                  Bytecode thats build from source onchain:
                  {AptosBytecodeUtils.clean_prefix(bytecode_from_source)}
                  """)
+    if not args.keep_build_data:
+        await AptosModuleUtils.clean_move_build_path(path=move_build_path, delete_folder=True)
     return bytecode_onchain == bytecode_from_source
