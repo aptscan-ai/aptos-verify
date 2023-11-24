@@ -11,7 +11,8 @@ except BaseException as e:
     pass
 
 try:
-    log_level = LocalMemory.get('global_logging_level') or os.getenv('LOG_LEVEL') or logging.INFO
+    log_level = LocalMemory.get('global_logging_level') or os.getenv(
+        'LOG_LEVEL') or logging.INFO
     log_level = int(log_level) if log_level else 0
     if log_level not in [
         logging.CRITICAL,
@@ -38,6 +39,7 @@ class Config(BaseModel):
     log_level: typing.Optional[int] = logging.INFO
     default_http_port: int = 9998
     default_http_host: str = '0.0.0.0'
+    min_aptos_cli_ver: str = os.getenv('MIN_APTOS_CLI_VERSION') or '2.2.0'
 
     @property
     def root_dir(self) -> str:

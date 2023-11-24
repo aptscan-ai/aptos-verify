@@ -1,5 +1,5 @@
 import aptos_verify.memory
-from aptos_verify.schemas import CliArgs, OutputResult
+from aptos_verify.schemas import VerifyArgs, OutputResult
 import traceback
 from aptos_verify.config import get_logger
 import traceback
@@ -9,9 +9,9 @@ logger = get_logger(__name__)
 def config_rule(title: str,
                 ) -> OutputResult:
     def inner_handle(func):
-        async def wrapper(args: CliArgs):
+        async def wrapper(args: VerifyArgs):
             try:
-                if type(args) is not CliArgs or not hasattr(args, 'module_id'):
+                if type(args) is not VerifyArgs or not hasattr(args, 'module_id'):
                     raise ValueError(
                         'Args for this rule is invalid. You need to set a param that is instance of CliArgs')
                 result = await func(args)
@@ -33,7 +33,7 @@ def config_rule(title: str,
                     error_code=error_code[0],
                     exeption_name=type(e).__name__,
                     error_message=str(e),
-                    traceback=traceback.format_exc() if logger.level < 20 else "",
+                    traceback=traceback.format_exc() if logger.root.level < 20 else "",
                     result=None if is_skip else False
                 )
 

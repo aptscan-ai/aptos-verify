@@ -38,7 +38,14 @@ docker run -d -p 9998:9998 aptos-verify-dk
 
 Use with CLI
 ``` cli
+Verify with source code that's published onchain
 aptos-verify -m 0x8d2d7bcde13b2513617df3f98cdd5d0e4b9f714c6308b9204fe18ad900d92609::admin
+
+Verify with source code on github
+aptos-verify -m 0x190d44266241744264b964a37b8f09863167a12d3e70cda39376cfb4e3561e12::liquidity_pool -vm github -git https://github.com/pontem-network/liquidswap
+
+Verify with local path (source code path)
+aptos-verify -m 0x190d44266241744264b964a37b8f09863167a12d3e70cda39376cfb4e3561e12::liquidity_pool -vm local -path /<local_path>
 
 Result:
 **************** Rule: Compare bytecode between published bytecode and published source code onchain *****************
@@ -50,17 +57,13 @@ Result:
 Use with sdk
 ```python
 from aptos_verify.main import start_verify
-from aptos_verify.schemas import CliArgs, Params
+from aptos_verify.schemas import VerifyParams
 import asyncio
 async def main():
     print('Start verify module: 0x8d2d7bcde13b2513617df3f98cdd5d0e4b9f714c6308b9204fe18ad900d92609::admin')
     rs = await start_verify(
-        CliArgs(
+        VerifyArgs(
             module_id='0x8d2d7bcde13b2513617df3f98cdd5d0e4b9f714c6308b9204fe18ad900d92609::admin',
-            # You can pass rpc node, log level...
-            params=Params(
-                aptos_node_url='https://fullnode.devnet.aptoslabs.com'
-            )
         )
     )
     print('Result:')

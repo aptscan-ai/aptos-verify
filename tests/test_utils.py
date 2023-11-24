@@ -1,14 +1,13 @@
 import pytest
 
 import aptos_verify.utils as utils
-from aptos_verify.schemas import CliArgs, Params
+from aptos_verify.schemas import VerifyArgs
 
 
 @pytest.mark.skip
 async def test_get_bytecode():
-    params = CliArgs(
+    params = VerifyArgs(
         module_id='0x8d2d7bcde13b2513617df3f98cdd5d0e4b9f714c6308b9204fe18ad900d92609::admin',
-        params=Params()
     )
     bytecode = await utils.AptosRpcUtils.rpc_account_get_bytecode(
         account_address=params.account_address,
@@ -19,13 +18,11 @@ async def test_get_bytecode():
 
 @pytest.mark.skip
 async def test_get_source_code():
-    params = CliArgs(
+    params = VerifyArgs(
         module_id='0x8d2d7bcde13b2513617df3f98cdd5d0e4b9f714c6308b9204fe18ad900d92609::admin',
-        params=Params()
     )
     bytecode = await utils.AptosRpcUtils.rpc_account_get_source_code(
         account_address=params.account_address,
         module_name=params.module_name
     )
     assert bytecode.get('module') != None
-    

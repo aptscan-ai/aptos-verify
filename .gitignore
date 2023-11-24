@@ -171,3 +171,4 @@ __pycache__/
 *.py[cod]
 *$py.class
 docker/*
+test_cli.py

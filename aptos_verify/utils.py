@@ -12,7 +12,8 @@ import tomli
 import tomli_w
 from subprocess import Popen, PIPE
 import json
-from aptos_verify.schemas import Params
+from aptos_verify.schemas import VerifyArgs
+from packaging import version
 
 logger = get_logger(__name__)
 
@@ -20,7 +21,7 @@ logger = get_logger(__name__)
 class AptosRpcUtils:
 
     @staticmethod
-    async def aptos_rest_client(params: Params = Params(), **options) -> RestClient:
+    async def aptos_rest_client(params: VerifyArgs, **options) -> RestClient:
         """
         Init rest client instance that will be used to work with RPC API
         Docs: https://pypi.org/project/aptos-sdk/
@@ -31,20 +32,19 @@ class AptosRpcUtils:
         )
 
     @staticmethod
-    @pydantic.validate_call
-    async def rpc_account_get_package(account_address: typing.Annotated[str, Field(min_length=1)], params: Params = Params(), **option) -> list[dict]:
+    async def rpc_account_get_package(params: VerifyArgs, **option) -> list[dict]:
         """
         Get resources of an account by given account address
         """
         client = await AptosRpcUtils.aptos_rest_client(params)
         logger.info(
-            f'Call Aptos RPC to get resoures of account: {account_address}')
-        key = f'local_cache_account_package_{account_address}'
+            f'Call Aptos RPC to get resoures of account: {params.account_address}')
+        key = f'local_cache_account_package_{params.account_address}'
         rs = LocalMemory.get(key=key)
         if LocalMemory.get(key=key):
             return rs
         resources = await client.account_resource(
-            account_address=account_address, resource_type='0x1::code::PackageRegistry')
+            account_address=params.account_address, resource_type='0x1::code::PackageRegistry')
         if resources:
             rs = resources.get('data', {}).get('packages')
             LocalMemory.set(key=key, value=rs)
@@ -52,16 +52,11 @@ class AptosRpcUtils:
         raise verify_exceptions.PackagesNotFoundException()
 
     @staticmethod
-    @pydantic.validate_call
-    async def rpc_account_get_source_code(account_address: typing.Annotated[str, Field(min_length=1)],
-                                          module_name: typing.Annotated[str, Field(
-                                              min_length=1)] = "",
-                                          params: Params = Params()
-                                          ) -> str:
+    async def rpc_account_get_source_code(params: VerifyArgs) -> str:
         """
         Get source code of a module
         """
-        packages = await AptosRpcUtils.rpc_account_get_package(account_address=account_address, params=params)
+        packages = await AptosRpcUtils.rpc_account_get_package(params)
         needed_module = {}
         all_modules = [{
             'source': module.get('source'),
@@ -70,20 +65,18 @@ class AptosRpcUtils:
             'package': package
         } for package in packages for module in package.get('modules', [])]
         needed_module = [k for k in all_modules if k.get(
-            'module_name') == module_name]
+            'module_name') == params.module_name]
         if not needed_module or not all_modules:
             raise verify_exceptions.ModuleNotFoundException()
         return {
             'module': needed_module[0],
-            'related_modules': [k for k in all_modules if k.get('module_name') != module_name]
+            'related_modules': [k for k in all_modules if k.get('module_name') != params.module_name]
         }
 
     @staticmethod
-    @pydantic.validate_call
-    async def rpc_account_get_bytecode(account_address: typing.Annotated[str, Field(min_length=1)],
-                                       module_name: typing.Annotated[str, Field(min_length=1)],
-                                       params: Params = Params()
-                                       ) -> str:
+    async def rpc_account_get_bytecode(params: VerifyArgs) -> str:
+        account_address = params.account_address
+        module_name = params.module_name
         logger.info(
             f'Start get bytecode of module: {account_address}::{module_name}')
         key = f'local_cache_account_module_bytecode_{account_address}_{module_name}'
@@ -154,10 +147,28 @@ class AptosBytecodeUtils:
 class ExecuteCmd():
 
     @staticmethod
+    def check_aptos_cli_version():
+        logger.info("Start check APTOS CLI version...")
+        stdo, stde = ExecuteCmd.exec("aptos --version")
+        if not stde:
+            current_v = stdo.split(" ")[1].strip()
+            min_version = get_config().min_aptos_cli_ver
+            if version.parse(current_v) < version.parse(get_config().min_aptos_cli_ver):
+                raise verify_exceptions.AptosCliException(
+                    f"Your Aptos Cli Version: {current_v.strip()} too old. Please upgrade to version: {min_version} or above")
+            else:
+                logger.info(f"Version: {current_v} is OK!")
+        else:
+            raise verify_exceptions.AptosCliException(
+                f"Error when run Aptos Cli: {stde}")
+        return True
+
+    @staticmethod
     def exec(cmd: str,  **kwargs):
         logger.debug(f"Start run cmd: {cmd}")
         process = Popen(cmd,
                         shell=True, stdout=PIPE, stderr=PIPE)
+
         process.wait()
         std_out, std_err = process.communicate()
         error_message = std_err.decode()
@@ -174,10 +185,10 @@ class AptosModuleUtils:
     @staticmethod
     @pydantic.validate_call
     async def clean_move_build_path(path: typing.Annotated[str, Field(min_length=3)], delete_folder=False):
-        logger.debug(f"Start clean move build path: {path}")
+        logger.info(f"Start clean move build path: {path}")
         try:
-            full_path = {os.path.join(
-                path, "*" if delete_folder is False else "")}
+            full_path = os.path.join(
+                path, "*" if delete_folder is False else "")
             if full_path.strip() in ['/', '/*', '*']:
                 raise ValueError(
                     f'{full_path} is invalid. path: /,/*,* are not excepted')
@@ -196,71 +207,82 @@ class AptosModuleUtils:
 
     @staticmethod
     @pydantic.validate_call
+    async def start_build(path: typing.Annotated[str, Field(
+        min_length=1)],
+        bytecode_compile_version: str = ''
+    ):
+        ExecuteCmd.check_aptos_cli_version()
+        logger.info('Start build project')
+        cmd_cv = ''
+        if bytecode_compile_version:
+            cmd_cv = f'--bytecode-version {bytecode_compile_version}'
+        stdout_message, stderr_message = ExecuteCmd.exec(
+            f'cd {path} && aptos move compile {cmd_cv}')
+        stdout_message = json.loads(stdout_message)
+        if not stdout_message.get('Result'):
+            raise verify_exceptions.CanNotBuildModuleException(
+                message=(
+                    f'\nstdout: \n {stdout_message}\n{stderr_message}'))
+        return stdout_message, stderr_message
+
+    @staticmethod
+    @pydantic.validate_call
     async def build_from_template(manifest: typing.Annotated[str, Field(min_length=5)],
                                   source_code: typing.Annotated[str, Field(
                                       min_length=10)],
                                   move_build_path: typing.Annotated[str, Field(
                                       min_length=1)],
-                                  force: bool = False,
+                                  force: bool = True,
                                   bytecode_compile_version='',
                                   aptos_framework_rev: str = ''
                                   ):
-        stdout_message, stderr_message = '', ''
-        try:
-            config = get_config()
-            real_move_build_path = move_build_path
-            logger.info(
-                f"Start build module and save into path: {real_move_build_path}")
-            await AptosModuleUtils.create_move_build_path(real_move_build_path)
-            if force:
-                # remove all files on move_build_path
-                await AptosModuleUtils.clean_move_build_path(real_move_build_path)
-            elif os.path.isfile(os.path.join(real_move_build_path, AptosModuleUtils.FILE_LOCK_FOLDER)):
-                raise verify_exceptions.CurrentBuildModuleInProcessException()
 
-            # copy all file on template to current path
-            ExecuteCmd.exec(
-                f'cp -rip {os.path.join(config.move_template_path,"*")} {os.path.join(real_move_build_path,"")}')
+        config = get_config()
+        real_move_build_path = move_build_path
+        logger.info(
+            f"Start build module and save into path: {real_move_build_path}")
+        await AptosModuleUtils.create_move_build_path(real_move_build_path)
+        if force:
+            # remove all files on move_build_path
+            await AptosModuleUtils.clean_move_build_path(real_move_build_path)
+        elif os.path.isfile(os.path.join(real_move_build_path, AptosModuleUtils.FILE_LOCK_FOLDER)):
+            raise verify_exceptions.CurrentBuildModuleInProcessException()
 
-            # replace template with given params
-            logger.info('Create Move.toml from manifest')
-            if aptos_framework_rev != '':
-                parse_toml = tomli.loads(manifest)
-                dependencies = parse_toml['dependencies']
-                for key, element in dependencies.items():
-                    if key in ['AptosFramework', 'AptosStdlib']:
-                        element['rev'] = aptos_framework_rev
-                        dependencies[key] = element
+        # copy all file on template to current path
+        ExecuteCmd.exec(
+            f'cp -rip {os.path.join(config.move_template_path,"*")} {os.path.join(real_move_build_path,"")}')
 
-                parse_toml['dependencies'] = dependencies
-                manifest = tomli_w.dumps(parse_toml)
+        # replace template with given params
+        logger.info('Create Move.toml from manifest')
+        if aptos_framework_rev != '':
+            parse_toml = tomli.loads(manifest)
+            dependencies = parse_toml['dependencies']
+            for key, element in dependencies.items():
+                if key in ['AptosFramework', 'AptosStdlib']:
+                    element['rev'] = aptos_framework_rev
+                    dependencies[key] = element
 
-            move_toml_path = os.path.join(real_move_build_path, "Move.toml")
-            with open(move_toml_path, 'w') as filetowrite:
-                filetowrite.write(manifest)
-            logger.info('Create Move.toml done')
+            parse_toml['dependencies'] = dependencies
+            manifest = tomli_w.dumps(parse_toml)
 
-            logger.info('Create code.move to store source code move')
-            code_path = os.path.join(
-                real_move_build_path, "sources/code.move")
-            with open(code_path, 'w') as filetowrite:
-                filetowrite.write(source_code)
-            logger.info('Create sources/code.move done')
+        move_toml_path = os.path.join(real_move_build_path, "Move.toml")
+        with open(move_toml_path, 'w') as filetowrite:
+            filetowrite.write(manifest)
+        logger.info('Create Move.toml done')
 
-            # start build project
-            logger.info('Start build project')
-            cmd_cv = ''
-            if bytecode_compile_version:
-                cmd_cv = f'--bytecode-version {bytecode_compile_version}'
-            stdout_message, stderr_message = ExecuteCmd.exec(
-                f'cd {real_move_build_path} && aptos move compile {cmd_cv}')
-            res = True
-            stdout_message = json.loads(stdout_message)
-            if not stdout_message.get('Result'):
-                raise ValueError()
-        except BaseException as e:
-            res = False
-            raise verify_exceptions.CanNotBuildModuleException(
-                message=(
-                    f'\nstdout: \n {stdout_message}\n{stderr_message}'))
-        return res
+        logger.info('Create code.move to store source code move')
+        code_path = os.path.join(
+            real_move_build_path, "sources/code.move")
+        with open(code_path, 'w') as filetowrite:
+            filetowrite.write(source_code)
+        logger.info('Create sources/code.move done')
+        # start build project
+        await AptosModuleUtils.start_build(
+            path=real_move_build_path, bytecode_compile_version=bytecode_compile_version)
+        return True
+
+    @staticmethod
+    @pydantic.validate_call
+    async def pull_from_github(repo: typing.Annotated[str, Field(min_length=5)], output_path: typing.Annotated[str, Field(min_length=3)]):
+        logger.info(f"Start pull source code from {repo}")
+        await ExecuteCmd.exec(f"git clone {repo} {output_path}")
