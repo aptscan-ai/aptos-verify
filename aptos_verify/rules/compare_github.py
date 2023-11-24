@@ -46,13 +46,14 @@ async def process_compare_bycode_github(args: VerifyArgs):
     # clone source code from git
     move_build_path = os.path.join(
         args.move_build_path, f'buiding_{args.account_address}_{int(round(time.time() * 1000))}')
-    task_list = [
-        extract_bytecode_from_git(args=args, move_build_path=move_build_path),
-        AptosRpcUtils.rpc_account_get_bytecode(params=args)
-    ]
-    bytecode_from_source, bytecode_info_onchain = await asyncio.gather(
-        *task_list
-    )
+    try:
+        bytecode_from_source = await extract_bytecode_from_git(args=args, move_build_path=move_build_path)
+    except BaseException as e:
+        if not args.keep_build_data:
+            await AptosModuleUtils.clean_move_build_path(path=move_build_path, delete_folder=True)
+        raise e
+
+    bytecode_info_onchain = await AptosRpcUtils.rpc_account_get_bytecode(params=args)
 
     bytecode_onchain = AptosBytecodeUtils.clean_prefix(
         bytecode_info_onchain.get('bytecode'))

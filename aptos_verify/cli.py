@@ -72,8 +72,8 @@ def parsing_args() -> VerifyArgs:
     if args.github:
         kwargs['github_repo'] = args.github
 
-    if args.localpath:
-        kwargs['local_path'] = args.localpath
+    if args.path:
+        kwargs['local_path'] = args.path
 
     return VerifyArgs(**kwargs)
 

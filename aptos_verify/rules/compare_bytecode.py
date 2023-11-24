@@ -67,13 +67,13 @@ async def get_bytecode_from_source_code_onchain(move_build_path: str,
                                                               aptos_framework_rev='',
                                                               bytecode_compile_version=params.compile_bytecode_version if params.compile_bytecode_version else '',)
     except verify_exceptions.CanNotBuildModuleException:
-        logger.error(
+        logger.warn(
             "Build with default manifest Move.toml fail, try to replace config [dependencies.AptosFramework] with rev=main.")
         buid_res = await AptosModuleUtils.build_from_template(manifest=manifest,
                                                               source_code=merge_source_code_string,
                                                               move_build_path=move_build_path,
                                                               bytecode_compile_version=params.compile_bytecode_version if params.compile_bytecode_version else '',
-                                                              force=False,
+                                                              force=True,
                                                               aptos_framework_rev='main')
     if buid_res:
         # get bytecode from build source
@@ -94,15 +94,16 @@ async def process_compare_bycode(args: VerifyArgs):
     """
     move_build_path = os.path.join(
         args.move_build_path, f'buiding_{args.account_address}_{int(round(time.time() * 1000))}')
-
-    task_list = [get_bytecode_from_source_code_onchain(move_build_path=move_build_path, params=args),
-                 AptosRpcUtils.rpc_account_get_bytecode(params=args)]
-    bytecode_from_source, bytecode_info_onchain = await asyncio.gather(
-        *task_list
-    )
+    try:
+        bytecode_from_source = await get_bytecode_from_source_code_onchain(move_build_path=move_build_path, params=args)
+    except BaseException as e:
+        if not args.keep_build_data:
+            await AptosModuleUtils.clean_move_build_path(path=move_build_path, delete_folder=True)
+        raise e
+    bytecode_onchain = await AptosRpcUtils.rpc_account_get_bytecode(params=args)
 
     bytecode_onchain = AptosBytecodeUtils.clean_prefix(
-        bytecode_info_onchain.get('bytecode'))
+        bytecode_onchain.get('bytecode'))
     bytecode_from_source = AptosBytecodeUtils.clean_prefix(
         bytecode_from_source)
 
@@ -113,6 +114,6 @@ async def process_compare_bycode(args: VerifyArgs):
                  Bytecode thats build from source onchain:
                  {AptosBytecodeUtils.clean_prefix(bytecode_from_source)}
                  """)
-    if not args.keep_build_data:
-        await AptosModuleUtils.clean_move_build_path(path=move_build_path, delete_folder=True)
+    print('asdfasdfas', args.keep_build_data)
+
     return bytecode_onchain == bytecode_from_source
