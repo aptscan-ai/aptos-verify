@@ -214,6 +214,41 @@ class AptosModuleUtils:
         ExecuteCmd.check_aptos_cli_version()
         logger.info('Start build project')
         cmd_cv = ''
+
+        # handle some dependencies
+        toml_file = os.path.join(path, 'Move.toml')
+        logger.info(f"Verifing file: {toml_file}")
+        contents = ""
+        with open(toml_file, 'r') as f:
+            contents = f.read()
+        parse_toml = tomli.loads(contents)
+        dependencies = parse_toml['dependencies']
+        list_replace = {
+            "AptosStdlib": "aptos-move/framework/aptos-stdlib",
+            "MoveStdlib": "aptos-move/framework/move-stdlib",
+            "AptosFramework": "aptos-move/framework/aptos-framework",
+            "AptosTokenObjects": "aptos-move/framework/aptos-token-objects",
+            "AptosToken": "aptos-move/framework/aptos-token"
+        }
+        need_write = False
+        for key, element in dependencies.items():
+            if key in list_replace.keys():
+                if element.get('local'):
+                    need_write = True
+                    del element['local']
+                    element['git'] = "https://github.com/aptos-labs/aptos-core.git"
+                    element['rev'] = 'main'
+                    element["subdir"] = list_replace[key]
+                    dependencies[key] = element
+
+        parse_toml['dependencies'] = dependencies
+        manifest = tomli_w.dumps(parse_toml)
+        if need_write:
+            with open(toml_file, 'w') as filetowrite:
+                logger.info(
+                    f"Update file manifest: {toml_file} because this file is using some local packages")
+                filetowrite.write(manifest)
+
         if bytecode_compile_version:
             cmd_cv = f'--bytecode-version {bytecode_compile_version}'
         stdout_message, stderr_message = ExecuteCmd.exec(
