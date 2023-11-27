@@ -114,6 +114,5 @@ async def process_compare_bycode(args: VerifyArgs):
                  Bytecode thats build from source onchain:
                  {AptosBytecodeUtils.clean_prefix(bytecode_from_source)}
                  """)
-    print('asdfasdfas', args.keep_build_data)
 
     return bytecode_onchain == bytecode_from_source
