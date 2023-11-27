@@ -71,7 +71,7 @@ async def api_verify(request: Request,
         kwargs['local_path'] = local_path
         kwargs['verify_mode'] = VerifyMode.LOCAL_PATH.value
     logger.debug(f"Params for verify: {kwargs}")
-   
+
     try:
         params = VerifyArgs(**kwargs)
         rs = await start_verify(VerifyArgs(
@@ -79,8 +79,8 @@ async def api_verify(request: Request,
             params=params
         ))
         return JSONResponse(content={
-            "message": "success",
-            "data": rs.json()
+            "message": "success" if rs.result else "fail",
+            "data": rs.dict()
         }, status_code=200)
     except BaseException as e:
         logger.error(e)
