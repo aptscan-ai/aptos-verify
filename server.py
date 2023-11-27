@@ -4,10 +4,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from aptos_verify.config import get_config
 import typing
 import uvicorn
-from aptos_verify.schemas import CliArgs, Params
+from aptos_verify.schemas import VerifyArgs
 import time
 from fastapi.responses import JSONResponse
 from aptos_verify.rules.compare_bytecode import logger
+import traceback
+from aptos_verify.const import VerifyMode
+
 app = FastAPI()
 try:
     from dotenv import load_dotenv
@@ -44,25 +47,44 @@ async def add_middleware_here(request: Request, call_next):
 
 
 @app.get('/verify/{module}')
-async def api_verify(request: Request, module: str, rpc: typing.Optional[str] = '', complie_ver: typing.Optional[str] = ''):
+async def api_verify(request: Request,
+                     module: str,
+                     rpc: typing.Optional[str] = '',
+                     complie_ver: typing.Optional[str] = '',
+                     github_repo: typing.Optional[str] = '',
+                     local_path: typing.Optional[str] = '',
+                     ):
     from aptos_verify.main import start_verify
-    kwargs = {}
-    params = Params(**kwargs)
+    kwargs = {
+        'module_id': module,
+
+    }
+    kwargs['verify_mode'] = VerifyMode.ONCHAIN.value
     if rpc:
         kwargs['aptos_node_url'] = rpc
     if complie_ver:
         kwargs['compile_bytecode_version'] = complie_ver
+    if github_repo:
+        kwargs['github_repo'] = github_repo
+        kwargs['verify_mode'] = VerifyMode.GITHUB.value
+    elif local_path:
+        kwargs['local_path'] = local_path
+        kwargs['verify_mode'] = VerifyMode.LOCAL_PATH.value
+    logger.debug(f"Params for verify: {kwargs}")
+   
     try:
-        params = Params(**kwargs)
-        rs = await start_verify(CliArgs(
+        params = VerifyArgs(**kwargs)
+        rs = await start_verify(VerifyArgs(
             module_id=module,
             params=params
         ))
         return JSONResponse(content={
             "message": "success",
-            "data": [dict(k)for k in rs]
+            "data": rs.json()
         }, status_code=200)
     except BaseException as e:
+        logger.error(e)
+        logger.debug(traceback.format_exc())
         return JSONResponse(content={
             "message": "fail",
             "error": str(e)
