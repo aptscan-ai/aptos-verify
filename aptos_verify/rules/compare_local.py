@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 
 
 async def extract_bytecode_from_git(args: VerifyArgs):
-    buid_res = await AptosModuleUtils.start_build(path=args.local_path)
+    buid_res = await AptosModuleUtils.start_build(path=args.local_path, account_address=args.account_address)
     if buid_res:
         # get bytecode from build source
         byte_from_source = await AptosBytecodeUtils.extract_bytecode_from_build(
@@ -50,4 +50,4 @@ async def process_compare_bycode_local_path(args: VerifyArgs):
                  Bytecode thats build from source onchain:
                  {AptosBytecodeUtils.clean_prefix(bytecode_from_source)}
                  """)
-    return bytecode_onchain == bytecode_from_source
+    return AptosBytecodeUtils.compare_two_bytecode(bytecode1=bytecode_onchain, bytecode2=bytecode_from_source)

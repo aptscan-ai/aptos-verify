@@ -26,3 +26,12 @@ async def test_get_source_code():
         module_name=params.module_name
     )
     assert bytecode.get('module') != None
+
+@pytest.mark.skip
+async def test_extract_bytecode():
+  
+    bytecode = await utils.AptosBytecodeUtils.extract_bytecode_from_build(
+        move_path='/Users/phong/aptos_verify_tmp/buiding_0xea31fe7bbc4304e174e7ccf72663a3ccdd974d28c9d4424ffa3c18d780859d44_1701158038532',
+        module_name='PRT__MLWNAZ'
+    )
+    assert bytecode.get('module') != None

@@ -143,6 +143,21 @@ class AptosBytecodeUtils:
             raise verify_exceptions.ModuleNotBuild()
         return bytes(modules[0]).hex()
 
+    @staticmethod
+    def compare_two_bytecode(bytecode1: str, bytecode2: str):
+        # debug different strings
+        l1 = list(bytecode1)
+        l2 = list(bytecode2)
+        end = '\033[0m'
+        underline = '\033[4m'
+        is_differ = False
+        for idx, x in enumerate(l1):
+            if len(l2) > idx and l1[idx] != l2[idx]:
+                is_differ = True
+                l1[idx] = f"{underline+l1[idx]+end}"
+        if is_differ:
+            logger.debug(f"Two bytecodes are different: {''.join(l1)}")
+        return bytecode1 == bytecode2
 
 class ExecuteCmd():
 
@@ -209,7 +224,8 @@ class AptosModuleUtils:
     @pydantic.validate_call
     async def start_build(path: typing.Annotated[str, Field(
         min_length=1)],
-        bytecode_compile_version: str = ''
+        bytecode_compile_version: str = '',
+        account_address: str = ''
     ):
         ExecuteCmd.check_aptos_cli_version()
         logger.info('Start build project')
@@ -240,8 +256,14 @@ class AptosModuleUtils:
                     element['rev'] = 'main'
                     element["subdir"] = list_replace[key]
                     dependencies[key] = element
-
         parse_toml['dependencies'] = dependencies
+        
+        # handle address empty
+        addresses = parse_toml['addresses']
+        for key, element in addresses.items():
+            if element == "_":
+                addresses[key] = account_address
+        
         manifest = tomli_w.dumps(parse_toml)
         if need_write:
             with open(toml_file, 'w') as filetowrite:
@@ -269,7 +291,8 @@ class AptosModuleUtils:
                                       min_length=1)],
                                   force: bool = True,
                                   bytecode_compile_version='',
-                                  aptos_framework_rev: str = ''
+                                  aptos_framework_rev: str = '',
+                                  account_address: str = ''
                                   ):
 
         config = get_config()
@@ -313,7 +336,7 @@ class AptosModuleUtils:
         logger.info('Create sources/code.move done')
         # start build project
         await AptosModuleUtils.start_build(
-            path=real_move_build_path, bytecode_compile_version=bytecode_compile_version)
+            path=real_move_build_path, bytecode_compile_version=bytecode_compile_version, account_address=account_address)
         return True
 
     @staticmethod

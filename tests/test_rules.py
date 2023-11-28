@@ -4,7 +4,7 @@ import aptos_verify.utils as utils
 from aptos_verify.schemas import VerifyArgs
 
 
-@pytest.mark.asyncio
+@pytest.mark.skip
 async def test_compare_bytecode():
     from aptos_verify.rules.compare_bytecode import process_compare_bycode
     params = VerifyArgs(

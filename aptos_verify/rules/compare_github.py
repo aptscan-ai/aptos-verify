@@ -2,7 +2,7 @@
 from aptos_verify.utils import AptosRpcUtils, AptosBytecodeUtils, AptosModuleUtils
 from aptos_verify.schemas import VerifyArgs
 from aptos_verify.config import Config, get_logger, get_config
-from aptos_verify.exceptions import ModuleNotFoundException
+from aptos_verify.exceptions import AptosCliException, ModuleNotFoundException
 import asyncio
 from aptos_verify.decorators import config_rule
 import aptos_verify.exceptions as verify_exceptions
@@ -20,7 +20,8 @@ async def extract_bytecode_from_git(args: VerifyArgs, move_build_path: str):
 
     # start build
     buid_res = await AptosModuleUtils.start_build(path=move_build_path,
-                                                  bytecode_compile_version=args.compile_bytecode_version)
+                                                  bytecode_compile_version=args.compile_bytecode_version, 
+                                                  account_address=args.account_address)
 
     # start extract bytecode
     if buid_res:
@@ -69,4 +70,4 @@ async def process_compare_bycode_github(args: VerifyArgs):
                  """)
     if not args.keep_build_data:
         await AptosModuleUtils.clean_move_build_path(path=move_build_path, delete_folder=True)
-    return bytecode_onchain == bytecode_from_source
+    return AptosBytecodeUtils.compare_two_bytecode(bytecode1=bytecode_onchain, bytecode2=bytecode_from_source)

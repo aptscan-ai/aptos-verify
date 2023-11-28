@@ -65,7 +65,9 @@ async def get_bytecode_from_source_code_onchain(move_build_path: str,
                                                               move_build_path=move_build_path,
                                                               force=False,
                                                               aptos_framework_rev='',
-                                                              bytecode_compile_version=params.compile_bytecode_version if params.compile_bytecode_version else '',)
+                                                              bytecode_compile_version=params.compile_bytecode_version if params.compile_bytecode_version else '',
+                                                              account_address=account_address
+                                                              )
     except verify_exceptions.CanNotBuildModuleException:
         logger.warn(
             "Build with default manifest Move.toml fail, try to replace config [dependencies.AptosFramework] with rev=main.")
@@ -74,7 +76,9 @@ async def get_bytecode_from_source_code_onchain(move_build_path: str,
                                                               move_build_path=move_build_path,
                                                               bytecode_compile_version=params.compile_bytecode_version if params.compile_bytecode_version else '',
                                                               force=True,
-                                                              aptos_framework_rev='main')
+                                                              aptos_framework_rev='main',
+                                                              account_address=account_address
+                                                              )
     if buid_res:
         # get bytecode from build source
         byte_from_source = await AptosBytecodeUtils.extract_bytecode_from_build(
@@ -115,4 +119,4 @@ async def process_compare_bycode(args: VerifyArgs):
                  {AptosBytecodeUtils.clean_prefix(bytecode_from_source)}
                  """)
 
-    return bytecode_onchain == bytecode_from_source
+    return AptosBytecodeUtils.compare_two_bytecode(bytecode1=bytecode_onchain, bytecode2=bytecode_from_source)
