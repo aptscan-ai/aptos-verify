@@ -53,6 +53,7 @@ async def api_verify(request: Request,
                      complie_ver: typing.Optional[str] = '',
                      github_repo: typing.Optional[str] = '',
                      local_path: typing.Optional[str] = '',
+                     keep: typing.Optional[str] = ''
                      ):
     from aptos_verify.main import start_verify
     kwargs = {
@@ -70,14 +71,14 @@ async def api_verify(request: Request,
     elif local_path:
         kwargs['local_path'] = local_path
         kwargs['verify_mode'] = VerifyMode.LOCAL_PATH.value
+    if keep:
+        kwargs['keep_build_data'] = True if keep == 'true' else False
+        
     logger.debug(f"Params for verify: {kwargs}")
 
     try:
         params = VerifyArgs(**kwargs)
-        rs = await start_verify(VerifyArgs(
-            module_id=module,
-            params=params
-        ))
+        rs = await start_verify(params)
         return JSONResponse(content={
             "message": "success" if rs.result else "fail",
             "data": rs.dict()
