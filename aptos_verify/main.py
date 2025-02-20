@@ -26,7 +26,7 @@ async def start_verify(args: VerifyArgs) -> OutputResult:
     Start verify a module with given address (ex: 0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa::swap_utils)
     """
     rule = config_rules.get(args.verify_mode)
-    logger.info(f"Start process verify with mode: {args.verify_mode}")
+    logger.info(f"Start process verify with mode test: {args.verify_mode}")
     check: OutputResult = await rule(args)
     logger.info(f"""
                     **************** Rule: {check.title} *****************
