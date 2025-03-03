@@ -81,9 +81,5 @@ uvicorn = "^0.24.0.post1"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[project.urls]
-"Homepage" = "https://github.com/aptscan-ai/aptos-verify"
-"Bug Tracker" = "https://github.com/aptscan-ai/aptos-verify/issues"
-
 [tool.poetry.scripts]
 aptos-verify = 'aptos_verify.cli:run'

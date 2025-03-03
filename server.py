@@ -94,7 +94,7 @@ async def api_verify(request: Request,
 
 def create_server():
     config = get_config()
-    port = int(os.getenv('HTTP_PORT') or 0) or config.default_http_port
+    port = config.default_http_port
     host = (os.getenv('HTTP_HOST') or '0.0.0.0') or config.default_http_host
 
     uvicorn.run(app, host=host,

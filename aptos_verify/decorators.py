@@ -15,10 +15,12 @@ def config_rule(title: str,
                     raise ValueError(
                         'Args for this rule is invalid. You need to set a param that is instance of CliArgs')
                 result = await func(args)
+
                 return OutputResult(
                     title=title,
                     message="Verify success" if result else "Verify fail",
-                    result=result
+                    result=result["result"],
+                    bytecode_from_source=result["bytecode_from_source"],
                 )
             except BaseException as e:
                 logger.debug(traceback.format_exc())

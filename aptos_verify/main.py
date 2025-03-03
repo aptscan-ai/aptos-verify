@@ -35,5 +35,6 @@ async def start_verify(args: VerifyArgs) -> OutputResult:
                     Message: {check.message}
                     Exception Class: {check.exeption_name}
                     Execption Message: {check.error_message}
+                    Bytecode From Source: {check.bytecode_from_source}
                     """)
     return check

@@ -35,6 +35,7 @@ Start container:
 docker run -d -p 9998:9998 aptos-verify-dk
 ```
 ## Usage
+pip install git+ssh://git@github.com:aptscan-ai/aptos-verify.git@hongphong-patch-1
 
 Use with CLI
 ``` cli

@@ -111,8 +111,8 @@ async def process_compare_bycode(args: VerifyArgs):
     bytecode_from_source = AptosBytecodeUtils.clean_prefix(
         bytecode_from_source)
     
-    logger.info(f"bytecode_onchain: {bytecode_onchain}")
-    logger.info(f"bytecode_from_source: {bytecode_from_source}")
+    # logger.info(f"bytecode_onchain: {bytecode_onchain}")
+    # logger.info(f"bytecode_from_source: {bytecode_from_source}")
 
     logger.debug(f"""
                  Bytecode onchain:
@@ -122,4 +122,8 @@ async def process_compare_bycode(args: VerifyArgs):
                  {AptosBytecodeUtils.clean_prefix(bytecode_from_source)}
                  """)
 
-    return AptosBytecodeUtils.compare_two_bytecode(bytecode1=bytecode_onchain, bytecode2=bytecode_from_source)
+    # return AptosBytecodeUtils.compare_two_bytecode(bytecode1=bytecode_onchain, bytecode2=bytecode_from_source)
+    return {
+        'result': AptosBytecodeUtils.compare_two_bytecode(bytecode1=bytecode_onchain, bytecode2=bytecode_from_source),
+        'bytecode_from_source': bytecode_from_source
+    }

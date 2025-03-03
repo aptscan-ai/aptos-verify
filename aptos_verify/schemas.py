@@ -74,3 +74,4 @@ class OutputResult(BaseModel):
     result: bool | None
     traceback: Optional[str] = ""
     error_message: Optional[str] = ""
+    bytecode_from_source: Optional[str] = ""
