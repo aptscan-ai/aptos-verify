@@ -44,6 +44,9 @@ def parsing_args() -> VerifyArgs:
 
     parser.add_argument('-git', '--github',
                         help="Github Repo to get source code and compare.", required=VerifyMode.GITHUB.value in sys.argv)
+    
+    parser.add_argument('-commit', '--commit',
+                        help="Github Repo commit hash to get source code and compare.", required=VerifyMode.GITHUB.value in sys.argv)    
 
     parser.add_argument('-path', '--path',
                         help="Local path that store source code to build.", required=VerifyMode.LOCAL_PATH.value in sys.argv)
@@ -71,6 +74,9 @@ def parsing_args() -> VerifyArgs:
 
     if args.github:
         kwargs['github_repo'] = args.github
+        
+    if args.commit:
+        kwargs['commit_hash'] = args.commit        
 
     if args.path:
         kwargs['local_path'] = args.path

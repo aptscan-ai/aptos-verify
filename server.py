@@ -52,6 +52,7 @@ async def api_verify(request: Request,
                      rpc: typing.Optional[str] = '',
                      complie_ver: typing.Optional[str] = '',
                      github_repo: typing.Optional[str] = '',
+                     commit_hash: typing.Optional[str] = '',
                      local_path: typing.Optional[str] = '',
                      keep: typing.Optional[str] = ''
                      ):
@@ -60,6 +61,7 @@ async def api_verify(request: Request,
         'module_id': module,
 
     }
+    
     kwargs['verify_mode'] = VerifyMode.ONCHAIN.value
     if rpc:
         kwargs['aptos_node_url'] = rpc
@@ -68,6 +70,8 @@ async def api_verify(request: Request,
     if github_repo:
         kwargs['github_repo'] = github_repo
         kwargs['verify_mode'] = VerifyMode.GITHUB.value
+        if commit_hash:
+            kwargs['commit_hash'] = commit_hash
     elif local_path:
         kwargs['local_path'] = local_path
         kwargs['verify_mode'] = VerifyMode.LOCAL_PATH.value
@@ -75,6 +79,7 @@ async def api_verify(request: Request,
         kwargs['keep_build_data'] = True if keep == 'true' else False
         
     logger.debug(f"Params for verify: {kwargs}")
+    print(kwargs)
 
     try:
         params = VerifyArgs(**kwargs)

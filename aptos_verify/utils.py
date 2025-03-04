@@ -341,6 +341,8 @@ class AptosModuleUtils:
 
     @staticmethod
     @pydantic.validate_call
-    async def pull_from_github(repo: typing.Annotated[str, Field(min_length=5)], output_path: typing.Annotated[str, Field(min_length=3)]):
-        logger.info(f"Start pull source code from {repo}")
-        await ExecuteCmd.exec(f"git clone {repo} {output_path}")
+    async def pull_from_github(repo: typing.Annotated[str, Field(min_length=5)], output_path: typing.Annotated[str, Field(min_length=3)], commit_hash: typing.Annotated[str, Field(min_length=5)]):
+        ExecuteCmd.exec(f"git clone {repo} {output_path}")
+        if commit_hash != '':
+            ExecuteCmd.exec(f"git -C {output_path} checkout {commit_hash}")
+            

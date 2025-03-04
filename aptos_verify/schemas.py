@@ -18,6 +18,7 @@ class VerifyArgs(BaseModel):
     move_build_path: typing.Optional[str] = os.path.join(
         str(Path.home()), 'aptos_verify_tmp')
     github_repo: typing.Optional[str] = ''
+    commit_hash: typing.Optional[str] = ''
     local_path: typing.Optional[str] = ''
     keep_build_data: typing.Optional[bool] = False
 

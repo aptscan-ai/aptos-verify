@@ -5,7 +5,7 @@ module.exports = {
             'script': './server.py',
             'error_file': './log/webservice_err.log',
             'out_file': './log/webservice_err.log',
-            'interpreter': 'python3'
+            'interpreter': './aptos-verify-venv/bin/python3'
         }
     ]
 }

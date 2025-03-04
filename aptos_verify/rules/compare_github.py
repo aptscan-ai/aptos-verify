@@ -15,9 +15,13 @@ async def extract_bytecode_from_git(args: VerifyArgs, move_build_path: str):
     # clone source code from git
 
     byte_from_source = ''
-
-    await AptosModuleUtils.pull_from_github(repo=args.github_repo, output_path=move_build_path)
-
+    try:
+        await AptosModuleUtils.pull_from_github(repo=args.github_repo, output_path=move_build_path, commit_hash=args.commit_hash)
+    except BaseException as e:
+        logger.info(f"pull_from_github: {e}")
+        if not args.keep_build_data:
+            await AptosModuleUtils.clean_move_build_path(path=move_build_path, delete_folder=True)
+        raise e
     # start build
     buid_res = await AptosModuleUtils.start_build(path=move_build_path,
                                                   bytecode_compile_version=args.compile_bytecode_version, 
@@ -55,7 +59,7 @@ async def process_compare_bycode_github(args: VerifyArgs):
         raise e
 
     bytecode_info_onchain = await AptosRpcUtils.rpc_account_get_bytecode(params=args)
-
+    
     bytecode_onchain = AptosBytecodeUtils.clean_prefix(
         bytecode_info_onchain.get('bytecode'))
     bytecode_from_source = AptosBytecodeUtils.clean_prefix(
@@ -68,6 +72,11 @@ async def process_compare_bycode_github(args: VerifyArgs):
                  Bytecode thats build from source onchain:
                  {AptosBytecodeUtils.clean_prefix(bytecode_from_source)}
                  """)
-    if not args.keep_build_data:
-        await AptosModuleUtils.clean_move_build_path(path=move_build_path, delete_folder=True)
-    return AptosBytecodeUtils.compare_two_bytecode(bytecode1=bytecode_onchain, bytecode2=bytecode_from_source)
+    # if not args.keep_build_data:
+    #     await AptosModuleUtils.clean_move_build_path(path=move_build_path, delete_folder=True)
+        
+    # return AptosBytecodeUtils.compare_two_bytecode(bytecode1=bytecode_onchain, bytecode2=bytecode_from_source)
+    return {
+        'result': AptosBytecodeUtils.compare_two_bytecode(bytecode1=bytecode_onchain, bytecode2=bytecode_from_source),
+        'bytecode_from_source': bytecode_from_source
+    }
