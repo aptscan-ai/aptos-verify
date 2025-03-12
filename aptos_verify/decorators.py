@@ -15,10 +15,14 @@ def config_rule(title: str,
                     raise ValueError(
                         'Args for this rule is invalid. You need to set a param that is instance of CliArgs')
                 result = await func(args)
-
+                if result["bytecode_from_source"] == '':
+                    message = 'failed to build code from source' 
+                else: 
+                    message = "Verify success" if result else "Verify fail"
+                    
                 return OutputResult(
                     title=title,
-                    message="Verify success" if result else "Verify fail",
+                    message=message,
                     result=result["result"],
                     bytecode_from_source=result["bytecode_from_source"],
                 )

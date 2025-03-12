@@ -58,8 +58,9 @@ async def get_bytecode_from_source_code_onchain(move_build_path: str,
             '\n' + decompressed_source_code
 
     # build bytecode from source code thats pulled onchain
-
-    try:
+        logger.info(f"parsing_manifest: {parsing_manifest}")
+        # logger.info(f"merge_source_code_string: {merge_source_code_string}")
+    # try:
         buid_res = await AptosModuleUtils.build_from_template(manifest=tomli_w.dumps(parsing_manifest),
                                                               source_code=merge_source_code_string,
                                                               move_build_path=move_build_path,
@@ -68,17 +69,18 @@ async def get_bytecode_from_source_code_onchain(move_build_path: str,
                                                               bytecode_compile_version=params.compile_bytecode_version if params.compile_bytecode_version else '',
                                                               account_address=account_address
                                                               )
-    except verify_exceptions.CanNotBuildModuleException:
-        logger.warn(
-            "Build with default manifest Move.toml fail, try to replace config [dependencies.AptosFramework] with rev=main.")
-        buid_res = await AptosModuleUtils.build_from_template(manifest=manifest,
-                                                              source_code=merge_source_code_string,
-                                                              move_build_path=move_build_path,
-                                                              bytecode_compile_version=params.compile_bytecode_version if params.compile_bytecode_version else '',
-                                                              force=True,
-                                                              aptos_framework_rev='main',
-                                                              account_address=account_address
-                                                              )
+    # except verify_exceptions.CanNotBuildModuleException:
+    #     logger.warn(
+    #         "Build with default manifest Move.toml fail, try to replace config [dependencies.AptosFramework] with rev=main.")
+    #     # buid_res = False
+    #     buid_res = await AptosModuleUtils.build_from_template(manifest=manifest,
+    #                                                           source_code=merge_source_code_string,
+    #                                                           move_build_path=move_build_path,
+    #                                                           bytecode_compile_version=params.compile_bytecode_version if params.compile_bytecode_version else '',
+    #                                                           force=True,
+    #                                                           aptos_framework_rev='main',
+    #                                                           account_address=account_address
+    #                                                           )
     if buid_res:
         # get bytecode from build source
         byte_from_source = await AptosBytecodeUtils.extract_bytecode_from_build(
@@ -108,18 +110,18 @@ async def process_compare_bycode(args: VerifyArgs):
 
     bytecode_onchain = AptosBytecodeUtils.clean_prefix(
         bytecode_onchain.get('bytecode'))
-    bytecode_from_source = AptosBytecodeUtils.clean_prefix(
-        bytecode_from_source)
-    
-    # logger.info(f"bytecode_onchain: {bytecode_onchain}")
-    # logger.info(f"bytecode_from_source: {bytecode_from_source}")
+    if bytecode_from_source:
+        bytecode_from_source = AptosBytecodeUtils.clean_prefix(
+            bytecode_from_source) 
+    else:
+        bytecode_from_source = ''
 
     logger.debug(f"""
                  Bytecode onchain:
-                 {AptosBytecodeUtils.clean_prefix(bytecode_onchain)} 
+                 {bytecode_onchain} 
                  \n\n
                  Bytecode thats build from source onchain:
-                 {AptosBytecodeUtils.clean_prefix(bytecode_from_source)}
+                 {bytecode_from_source}
                  """)
 
     # return AptosBytecodeUtils.compare_two_bytecode(bytecode1=bytecode_onchain, bytecode2=bytecode_from_source)
