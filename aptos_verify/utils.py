@@ -215,7 +215,6 @@ class AptosModuleUtils:
     @staticmethod
     @pydantic.validate_call
     async def create_move_build_path(path: typing.Annotated[str, Field(min_length=1)]):
-        logger.debug(f"Start create move build path: {path}")
         config = get_config()
         ExecuteCmd.exec(
             f'mkdir -p {path}')
@@ -276,6 +275,7 @@ class AptosModuleUtils:
         stdout_message, stderr_message = ExecuteCmd.exec(
             f'cd {path} && aptos move compile {cmd_cv}')
         stdout_message = json.loads(stdout_message)
+
         if not stdout_message.get('Result'):
             raise verify_exceptions.CanNotBuildModuleException(
                 message=(
@@ -300,13 +300,17 @@ class AptosModuleUtils:
         logger.info(
             f"Start build module and save into path: {real_move_build_path}")
         await AptosModuleUtils.create_move_build_path(real_move_build_path)
+        logger.info(
+            f"End build module and save into path: {os.path.isfile(os.path.join(real_move_build_path, AptosModuleUtils.FILE_LOCK_FOLDER))}")        
         if force:
             # remove all files on move_build_path
             await AptosModuleUtils.clean_move_build_path(real_move_build_path)
-        elif os.path.isfile(os.path.join(real_move_build_path, AptosModuleUtils.FILE_LOCK_FOLDER)):
+        elif os.path.isfile(os.path.join(real_move_build_path, AptosModuleUtils.FILE_LOCK_FOLDER)):          
             raise verify_exceptions.CurrentBuildModuleInProcessException()
 
         # copy all file on template to current path
+        logger.info(
+            f"copy all file on template to current path: {config.move_template_path}")        
         ExecuteCmd.exec(
             f'cp -rip {os.path.join(config.move_template_path,"*")} {os.path.join(real_move_build_path,"")}')
 
