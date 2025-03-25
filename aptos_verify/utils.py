@@ -184,7 +184,7 @@ class ExecuteCmd():
         process = Popen(cmd,
                         shell=True, stdout=PIPE, stderr=PIPE)
 
-        process.wait()
+        # process.wait()
         std_out, std_err = process.communicate()
         error_message = std_err.decode()
         stdout_message = std_out.decode()

@@ -16,7 +16,7 @@ class VerifyArgs(BaseModel):
     aptos_node_url: typing.Optional[str] = 'https://fullnode.mainnet.aptoslabs.com'
     compile_bytecode_version: typing.Optional[str] = ''
     move_build_path: typing.Optional[str] = os.path.join(
-        str(Path.home()), 'aptos_verify_tmp')
+        str(Path('/data')), 'aptos_verify_tmp')
     github_repo: typing.Optional[str] = ''
     commit_hash: typing.Optional[str] = ''
     local_path: typing.Optional[str] = ''
